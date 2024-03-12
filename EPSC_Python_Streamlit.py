@@ -23,44 +23,42 @@ def main():
                 if file_extension == 'txt':
                     read_data = uploaded_file.read().decode("utf-8")
                     data = np.loadtxt(read_data.splitlines(), dtype=float)  # Specify dtype=float
-                    EPSCs = data[:, :]
+                    st.session_state.EPSCs = data[:, :]
 
                 if file_extension == 'csv':
-                    EPSCs = pd.read_csv(uploaded_file)
-                    EPSCs = EPSCs.to_numpy()
+                    st.session_state.EPSCs = pd.read_csv(uploaded_file)
+                    st.session_state.EPSCs = st.session_state.EPSCs.to_numpy()
 
                 if file_extension == 'xlsx':
                     sheet_number = 1
                     sheet_number = st.number_input("Enter sheet number",min_value=0,step=1,key=str(idx)+"select")
-                    EPSCs = pd.read_excel(uploaded_file,sheet_name=sheet_number)
-                    EPSCs = EPSCs.to_numpy()
+                    st.session_state.EPSCs = pd.read_excel(uploaded_file,sheet_name=sheet_number)
+                    st.session_state.EPSCs = st.session_state.EPSCs.to_numpy()
 
 
                 # Display the raw data
                 st.subheader("Raw Data")
-                st.write(EPSCs[0:10])
-
-                parameter = st.number_input("Enter parameter to analyze", min_value=1, step=1,key=str(idx)+"a")
+                st.write(st.session_state.EPSCs[0:10])
 
                 # Parameter input
                 time_duration = st.number_input("Enter time in ms", 12,key=str(idx)+"b")
                 num_pools = st.slider("Enter number of pools", min_value=1, max_value=10, value=None, step=1,key=str(idx)+"c")
-                # EPSCs = EPSCs_list[0]
+                # st.session_state.EPSCs = st.session_state.EPSCs_list[0]
 
                 #Preprocessing
                 st.subheader('Preprocessing', divider='blue')
                 st.write("Preprocessing is optional.")
 
                 #Set some essential variables
-                num_samples = EPSCs.shape[0]
-                timepoints, st.session_state.template = EPSC_App_Connection.create_template(EPSCs, time_duration,
+                num_samples = st.session_state.EPSCs.shape[0]
+                timepoints, st.session_state.template = EPSC_App_Connection.create_template(st.session_state.EPSCs, time_duration,
                                                                                             num_samples)
                 peak_index = np.argmax(st.session_state.template)
                 #Display data before processing
                 st.write("Data before processing:")
                 fig, axs = plt.subplots(1, 1)
-                for i in range(EPSCs.shape[1]):
-                    axs.plot(timepoints, EPSCs[:, i], label=f'Trace {i + 1}')
+                for i in range(st.session_state.EPSCs.shape[1]):
+                    axs.plot(timepoints, st.session_state.EPSCs[:, i], label=f'Trace {i + 1}')
 
                 axs.set_xlabel('Time (ms)', fontsize=13)
                 axs.set_ylabel('Current (pA)', fontsize=13)
@@ -75,9 +73,10 @@ def main():
 
 
                 if invert:
-                    EPSCs = EPSCs * -1
+                    st.session_state.EPSCs = st.session_state.EPSCs * -1
                 if st.button("Preprocess Data",key=str(idx)+"preprocess"):
-                    min_checked_data,count_peak = EPSC_preprocessing.check_minimum_peak_amplitude(EPSCs,min_peak_amp,peak_index)
+                    st.session_state.processed_data = None
+                    min_checked_data,count_peak = EPSC_preprocessing.check_minimum_peak_amplitude(st.session_state.EPSCs,min_peak_amp,peak_index)
                     aligned_data,count_aligned = EPSC_preprocessing.check_peak_alignment(min_checked_data, peak_index)
                     rise_data,count_rise = EPSC_preprocessing.check_rise_time(aligned_data, max_rise_time, time_duration, peak_index)
                     baseline_mean = EPSC_preprocessing.calculate_baseline_mean(rise_data, peak_index, time_duration)
@@ -99,13 +98,17 @@ def main():
                     st.write("### Traces Removed:")
                     st.table(df)
 
+
                 #Analysis begins
                 st.subheader('Analysis', divider='blue')
 
                 # Button to trigger analysis
                 if st.button("Create Template",key=str(idx)+"template"):
-                    num_samples = EPSCs.shape[0]
-                    timepoints, st.session_state.template = EPSC_App_Connection.create_template(EPSCs, time_duration, num_samples)
+                    if st.session_state.processed_data[0][0] != None:
+                        st.session_state.EPSCs = st.session_state.processed_data
+
+                    num_samples = st.session_state.EPSCs.shape[0]
+                    timepoints, st.session_state.template = EPSC_App_Connection.create_template(st.session_state.EPSCs, time_duration, num_samples)
                     st.session_state.endPoint = st.session_state.template.shape[0] - 1
                     st.session_state.peak_index = np.argmax(st.session_state.template)
 
@@ -118,10 +121,10 @@ def main():
                     axs[0].set_ylabel("Current (pA)")
                     axs[0].set_title("Average Template")
                     st.write("Processing traces by size... ")
-                    trace_bins = EPSC_App_Connection.visualize_size_pools(EPSCs, num_pools)
-
-                    for i in range(EPSCs.shape[1]):
-                        axs[1].plot(timepoints, EPSCs[:, i], label=f'Trace {i + 1}',
+                    trace_bins = EPSC_App_Connection.visualize_size_pools(st.session_state.EPSCs, num_pools)
+                    print(st.session_state.EPSCs.shape)
+                    for i in range(st.session_state.EPSCs.shape[1]):
+                        axs[1].plot(timepoints, st.session_state.EPSCs[:, i], label=f'Trace {i + 1}',
                                     color=plt.cm.viridis(trace_bins[i] / num_pools))
 
                     axs[1].set_xlabel('Time (ms)', fontsize=13)
@@ -135,7 +138,7 @@ def main():
                         st.write("Please create template first")
                     else:
                         st.write("Creating graph of one pool...")
-                        means, vars = EPSC_App_Connection.one_pool_analysis(EPSCs, st.session_state.peak_index, num_pools,
+                        means, vars = EPSC_App_Connection.one_pool_analysis(st.session_state.EPSCs, st.session_state.peak_index, num_pools,
                                                                             st.session_state.endPoint,
                                                                             st.session_state.template)
 
@@ -160,9 +163,9 @@ def main():
                     if st.session_state.peak_index is None:
                         st.write("Please create template first")
                     else:
-                        pool_indices = EPSC_App_Connection.create_pool_indices(EPSCs, st.session_state.peak_index, num_pools)
-                        raw_sorted = EPSC_App_Connection.sort_EPSCs_by_size(EPSCs, st.session_state.peak_index)
-                        num_traces = EPSCs.shape[1]
+                        pool_indices = EPSC_App_Connection.create_pool_indices(st.session_state.EPSCs, st.session_state.peak_index, num_pools)
+                        raw_sorted = EPSC_App_Connection.sort_EPSCs_by_size(st.session_state.EPSCs, st.session_state.peak_index)
+                        num_traces = st.session_state.EPSCs.shape[1]
                         segment_indices, residuals_array = EPSC_App_Connection.create_segment_indices(num_traces, raw_sorted, st.session_state.template)
                         multi_means_list, multi_var_list = EPSC_App_Connection.multi_pool_analysis(num_pools, pool_indices, raw_sorted, residuals_array, st.session_state.peak_index, st.session_state.endPoint,
                                             segment_indices)
