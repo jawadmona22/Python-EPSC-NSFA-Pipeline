@@ -46,8 +46,10 @@ def main():
                 # st.session_state.EPSCs = st.session_state.EPSCs_list[0]
 
                 #Preprocessing
-                st.subheader('Preprocessing', divider='blue')
+                st.subheader('Preprocessing')
                 st.write("Preprocessing is optional.")
+                st.session_state.use_processed = st.checkbox('Use Processed Data?')
+
 
                 #Set some essential variables
                 num_samples = st.session_state.EPSCs.shape[0]
@@ -100,13 +102,15 @@ def main():
 
 
                 #Analysis begins
-                st.subheader('Analysis', divider='blue')
+                st.subheader('Analysis')
 
                 # Button to trigger analysis
                 if st.button("Create Template",key=str(idx)+"template"):
-                    if st.session_state.processed_data[0][0] != None:
+                    if st.session_state.use_processed:
                         st.session_state.EPSCs = st.session_state.processed_data
-
+                        st.write("Processed data in use.")
+                    else:
+                        st.write("Unprocessed data in use.")
                     num_samples = st.session_state.EPSCs.shape[0]
                     timepoints, st.session_state.template = EPSC_App_Connection.create_template(st.session_state.EPSCs, time_duration, num_samples)
                     st.session_state.endPoint = st.session_state.template.shape[0] - 1

@@ -307,8 +307,8 @@ def one_pool_analysis(EPSCs,peak_index,num_pools,endPoint,template):
     num_traces = EPSCs.shape[1]
     raw_sorted = sort_EPSCs_by_size(EPSCs,peak_index)
     segment_indices,residuals_array = create_segment_indices(num_traces,raw_sorted,template)
-    means = mean_calculation(raw_sorted, peak_index, endPoint, segment_indices, pool_indices, 0)
-    vars = var_calculation(peak_index, residuals_array, segment_indices, pool_indices, endPoint, 0)
+    means = mean_calculation(raw_sorted, peak_index, endPoint, segment_indices, pool_indices, 3)
+    vars = var_calculation(peak_index, residuals_array, segment_indices, pool_indices, endPoint, 3)
     return means,vars
 
 
