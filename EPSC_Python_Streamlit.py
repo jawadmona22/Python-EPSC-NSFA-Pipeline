@@ -66,10 +66,11 @@ def main():
                 axs.set_ylabel('Current (pA)', fontsize=13)
                 axs.set_title('EPSCs Before Processing')
                 st.pyplot(fig)
-
+                st.write("For all parameters, leave as 0 to exclude criterion")
                 invert = st.checkbox("Invert Trace",key=str(idx)+"checkInvert")
-                max_rise_time = st.number_input("Enter max rise time in ms", .3,key=str(idx)+"d")
-                min_peak_amp = st.number_input("Enter min peak amplitude in pA", 20,key=str(idx)+"e")
+                peak_align = st.checkbox("Force peak alignment?",key=str(idx) + "checkPeak")
+                max_rise_time = st.number_input("Enter max rise time in ms", 0,key=str(idx)+"d")
+                min_peak_amp = st.number_input("Enter min peak amplitude in pA", 0,key=str(idx)+"e")
                 pA_threshold = st.number_input("Enter tolerance of baseline return after peak in pA",key=str(idx)+"f")
                 time_threshold = st.number_input("Enter how far along baseline to check for tolerance in ms",key=str(idx)+"g")
 
@@ -78,11 +79,27 @@ def main():
                     st.session_state.EPSCs = st.session_state.EPSCs * -1
                 if st.button("Preprocess Data",key=str(idx)+"preprocess"):
                     st.session_state.processed_data = None
-                    min_checked_data,count_peak = EPSC_preprocessing.check_minimum_peak_amplitude(st.session_state.EPSCs,min_peak_amp,peak_index)
-                    aligned_data,count_aligned = EPSC_preprocessing.check_peak_alignment(min_checked_data, peak_index)
-                    rise_data,count_rise = EPSC_preprocessing.check_rise_time(aligned_data, max_rise_time, time_duration, peak_index)
-                    baseline_mean = EPSC_preprocessing.calculate_baseline_mean(rise_data, peak_index, time_duration)
-                    data_returns_to_base, count_baseline = EPSC_preprocessing.check_return_to_base(rise_data, baseline_mean, time_duration,pA_threshold,time_threshold,peak_index)
+                    if (max_rise_time != 0):
+                        min_checked_data,count_peak = EPSC_preprocessing.check_minimum_peak_amplitude(st.session_state.EPSCs,min_peak_amp,peak_index)
+                    else:
+                        min_checked_data = st.session_state.EPSCs
+                        count_peak = 0
+                    if peak_align:
+                        aligned_data,count_aligned = EPSC_preprocessing.check_peak_alignment(min_checked_data, peak_index)
+                    else:
+                        aligned_data = min_checked_data
+                        count_aligned = 0
+                    if (min_peak_amp != 0):
+                        rise_data,count_rise = EPSC_preprocessing.check_rise_time(aligned_data, max_rise_time, time_duration, peak_index)
+                    else:
+                        rise_data = aligned_data
+                        count_rise = 0
+                    if (pA_threshold != 0):
+                        baseline_mean = EPSC_preprocessing.calculate_baseline_mean(rise_data, peak_index, time_duration)
+                        data_returns_to_base, count_baseline = EPSC_preprocessing.check_return_to_base(rise_data, baseline_mean, time_duration,pA_threshold,time_threshold,peak_index)
+                    else:
+                        data_returns_to_base = rise_data
+                        count_baseline = 0
                     st.session_state.processed_data = data_returns_to_base
                     fig, axs = plt.subplots(1, 1)
                     for i in range(st.session_state.processed_data.shape[1]):
