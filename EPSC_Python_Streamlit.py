@@ -78,7 +78,7 @@ def main():
 
                     # Save the updated workbook to the BytesIO stream
                 final_excel_stream = BytesIO()
-                workbook.save(final_excel_stream)
+                workbook.close(final_excel_stream)
                 final_excel_stream.seek(0)
                 st.download_button(label="Download Report", data=final_excel_stream, file_name=flnme,
                                        mime="application/vnd.ms-excel")
