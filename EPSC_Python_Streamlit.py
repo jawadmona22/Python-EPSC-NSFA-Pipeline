@@ -44,7 +44,7 @@ def main():
                         header.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=29, startcol=0,)
                         item.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=30, startcol=0,)
                         print(item)
-                    writer.save()
+                    writer.close()
                 #Write in the plots to the relevant individual sheet
                 for idx, current_file_name in enumerate(st.session_state["filenameslist"]):
                     # Load the workbook from the BytesIO stream
