@@ -20,71 +20,6 @@ def main():
     uploaded_files = st.file_uploader("Upload a file", type=["csv", "txt", "xlsx"], accept_multiple_files=True)
     if uploaded_files is not None:
 
-        ##Report generation
-        if st.button("Generate Report"):
-            if "multiplepools" in st.session_state and "singlepool_dict_list" in st.session_state:
-                st.write(st.session_state["multiplepools"])
-                # flnme = st.text_input('Enter Excel file name (e.g. EPSC_report.xlsx)')
-                # if flnme != "":
-                #     if flnme.endswith(".xlsx") == False:  # add file extension if it is forgotten
-                #         flnme = flnme + ".xlsx"
-                flnme = "Report.xlsx"
-                buffer = BytesIO()
-                #Write in the data to the relevant individual sheet
-                with pd.ExcelWriter(buffer) as writer:
-                    for idx, item in enumerate(st.session_state["singlepool_dict_list"]):
-                        sheet_name = st.session_state["filenameslist"][idx]
-                        header = pd.DataFrame({"One Pool Information":""},index=[0])
-                        header.to_excel(writer, sheet_name=sheet_name,startrow=0, startcol=0,)
-                        dict = pd.DataFrame(item,index=[0])
-                        dict.to_excel(writer, sheet_name=sheet_name,startrow=1, startcol=0,)
-
-                    for idx, item in enumerate(st.session_state["multiplepools"]):
-                        header = pd.DataFrame({"Multiple Pool Information":""},index=[0])
-                        header.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=29, startcol=0,)
-                        item.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=30, startcol=0,)
-                        print(item)
-                    writer.close()
-                #Write in the plots to the relevant individual sheet
-                for idx, current_file_name in enumerate(st.session_state["filenameslist"]):
-                    # Load the workbook from the BytesIO stream
-                    buffer.seek(0)  # Reset stream position
-                    workbook = load_workbook(buffer)
-
-                    # Save the single pool plot to a BytesIO object
-                    image_stream = BytesIO()
-                    single_plot_fig = st.session_state["singlepool_plot_list"][idx]
-                    single_plot_fig.savefig(image_stream, format='png')
-                    image_stream.seek(0)
-
-                    # Add the plot image to the workbook
-                    ws = workbook[current_file_name]
-                    img = Image(image_stream)
-                    img.height = img.height/1.2
-                    img.width = img.width/1.2
-                    ws.add_image(img, 'G1')
-
-                    image_stream = BytesIO()
-                    multi_pool_plot = st.session_state["multiplepools_plot_list"][idx]
-                    multi_pool_plot.savefig(image_stream, format='png')
-                    image_stream.seek(0)
-
-                    # Add the plot image to the workbook
-                    ws = workbook[current_file_name]
-                    img = Image(image_stream)
-                    img.height = img.height/4
-                    img.width = img.width/4
-                    ws.add_image(img, 'G30')
-
-                    # Save the updated workbook to the BytesIO stream
-                final_excel_stream = BytesIO()
-                workbook.close(final_excel_stream)
-                final_excel_stream.seek(0)
-                st.download_button(label="Download Report", data=final_excel_stream, file_name=flnme,
-                                       mime="application/vnd.ms-excel")
-
-
-
         for idx, uploaded_file in enumerate(uploaded_files):
             if "filenameslist" in st.session_state:
                 if uploaded_file.name not in st.session_state["filenameslist"]:
@@ -287,12 +222,69 @@ def main():
 
 
 
-                # if st.session_state["Run Multiple Pool Analysis"]:
-                #     # if st.button("Download Button"):
-                #     #     st.session_state["Download Button"] = not st.session_state["Download Button"]
-                #     #     st.write("Report downloading...")
+##Report generation
+        if st.button("Generate Report"):
+            if "multiplepools" in st.session_state and "singlepool_dict_list" in st.session_state:
+                st.write(st.session_state["multiplepools"])
+                # flnme = st.text_input('Enter Excel file name (e.g. EPSC_report.xlsx)')
+                # if flnme != "":
+                #     if flnme.endswith(".xlsx") == False:  # add file extension if it is forgotten
+                #         flnme = flnme + ".xlsx"
+                flnme = "Report.xlsx"
+                buffer = BytesIO()
+                #Write in the data to the relevant individual sheet
+                with pd.ExcelWriter(buffer) as writer:
+                    for idx, item in enumerate(st.session_state["singlepool_dict_list"]):
+                        sheet_name = st.session_state["filenameslist"][idx]
+                        header = pd.DataFrame({"One Pool Information":""},index=[0])
+                        header.to_excel(writer, sheet_name=sheet_name,startrow=0, startcol=0,)
+                        dict = pd.DataFrame(item,index=[0])
+                        dict.to_excel(writer, sheet_name=sheet_name,startrow=1, startcol=0,)
 
-                #     #     st.write(st.session_state.pool_df)
+                    for idx, item in enumerate(st.session_state["multiplepools"]):
+                        header = pd.DataFrame({"Multiple Pool Information":""},index=[0])
+                        header.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=29, startcol=0,)
+                        item.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=30, startcol=0,)
+                        # print(item)
+                    # writer.close()
+                #Write in the plots to the relevant individual sheets
+                buffer.seek(0)  # Reset stream position
+                workbook = load_workbook(buffer)
+                for idx, current_file_name in enumerate(st.session_state["filenameslist"]):
+                    # Load the workbook from the BytesIO stream
+
+                    # Save the single pool plot to a BytesIO object
+                    image_stream = BytesIO()
+                    single_plot_fig = st.session_state["singlepool_plot_list"][idx]
+                    single_plot_fig.savefig(image_stream, format='png')
+                    image_stream.seek(0)
+
+                    # Add the plot image to the workbook
+                    # print(f"Current file adding picture to: {current_file_name}")
+                    ws = workbook[current_file_name]
+                    img = Image(image_stream)
+                    img.height = img.height/1.2
+                    img.width = img.width/1.2
+                    ws.add_image(img, 'G1')
+
+                    image_stream = BytesIO()
+                    multi_pool_plot = st.session_state["multiplepools_plot_list"][idx]
+                    multi_pool_plot.savefig(image_stream, format='png')
+                    image_stream.seek(0)
+
+                    # Add the plot image to the workbook
+                    ws = workbook[current_file_name]
+                    img = Image(image_stream)
+                    img.height = img.height/4
+                    img.width = img.width/4
+                    ws.add_image(img, 'G30')
+
+                    # Save the updated workbook to the BytesIO stream
+                final_excel_stream = BytesIO()
+                workbook.save(final_excel_stream)
+                final_excel_stream.seek(0)
+                st.download_button(label="Download Report", data=final_excel_stream, file_name=flnme,
+                                       mime="application/vnd.ms-excel")
 
 
 
