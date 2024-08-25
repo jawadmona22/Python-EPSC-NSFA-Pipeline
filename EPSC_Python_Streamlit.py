@@ -15,7 +15,6 @@ def main():
     if "multiple_pools_list" in st.session_state:
         st.session_state.multiple_pools_list = st.session_state.multiple_pools_list
     st.title("NSFA Analysis App")
-
     # File upload
     uploaded_files = st.file_uploader("Upload a file", type=["csv", "txt", "xlsx"], accept_multiple_files=True)
     if uploaded_files is not None:
@@ -50,7 +49,7 @@ def main():
                 st.write(st.session_state.EPSCs[0:10])
 
                 # Parameter input
-                time_duration = st.number_input("Enter time in ms", 12, key=str(idx) + "b")
+                time_duration = st.number_input("Enter time in ms", 5, key=str(idx) + "b")
                 num_pools = st.slider("Enter number of pools", min_value=1, max_value=10, value=None, step=1,
                                       key=str(idx) + "c")
                 # st.session_state.EPSCs = st.session_state.EPSCs_list[0]
@@ -175,116 +174,109 @@ def main():
                     st.pyplot(fig)
 
                 if st.button("Run One Pool Analysis", key=str(idx) + "onepool"):
-                    if st.session_state.peak_index is None:
-                        st.write("Please create template first")
-                    else:
-                        st.write("Creating graph of one pool...")
-                        means, vars = EPSC_App_Connection.one_pool_analysis(st.session_state.EPSCs,
-                                                                            st.session_state.peak_index, num_pools,
-                                                                            st.session_state.endPoint,
-                                                                            st.session_state.template)
-
-                        # Fitting function
-                        fit_parabola, roots, initial_slope = EPSC_App_Connection.fitting_parabola(means, vars)
-
-                        n = roots[0] / initial_slope
-
-                        fig, axs = plt.subplots(1, 1)
-                        axs.scatter(means, vars, color='black')
-                        sorter = np.sort(means)
-                        axs.plot(sorter, fit_parabola(sorter), color='black')
-                        axs.set_title("Variance vs Mean")
-                        axs.set_xlabel("Mean Current (pA)")
-                        axs.set_ylabel("Current variance (pA^2)")
-                        st.pyplot(fig)
-
-                        st.write("Initial Current (i):", initial_slope)
-                        st.write("Number of Channels (n):", n)
-
-                        single_pool_dict = {"n":n, "i":i}
-                        if "singlepool_dict_list" not in st.session_state:
-                            st.session_state["singlepool_dict_list"] = []
-                            st.session_state["singlepool_plot_list"] = []
-                            st.session_state["singlepool_plot_list"].append(fig)
-                            st.session_state["singlepool_dict_list"].append(single_pool_dict)
-                        else:
-                            for item in st.session_state["singlepool_dict_list"]:
-                                if single_pool_dict == item:
-                                    use = False
-                                else:
-                                    use = True
-                            if use == True:
-                                st.session_state["singlepool_dict_list"].append(single_pool_dict)
-                                st.session_state["singlepool_plot_list"].append(fig)
+                    run_single_pool_analysis(num_pools)
 
                 if st.button("Run Multiple Pool Analysis", key=str(idx) + "multipool"):
                     run_multipool_analysis(num_pools)
 
 
 
-##Report generation
-        if st.button("Generate Report"):
-            if "multiplepools" in st.session_state and "singlepool_dict_list" in st.session_state:
-                st.write(st.session_state["multiplepools"])
-                # flnme = st.text_input('Enter Excel file name (e.g. EPSC_report.xlsx)')
-                # if flnme != "":
-                #     if flnme.endswith(".xlsx") == False:  # add file extension if it is forgotten
-                #         flnme = flnme + ".xlsx"
-                flnme = "Report.xlsx"
-                buffer = BytesIO()
-                #Write in the data to the relevant individual sheet
-                with pd.ExcelWriter(buffer) as writer:
-                    for idx, item in enumerate(st.session_state["singlepool_dict_list"]):
-                        sheet_name = st.session_state["filenameslist"][idx]
-                        header = pd.DataFrame({"One Pool Information":""},index=[0])
-                        header.to_excel(writer, sheet_name=sheet_name,startrow=0, startcol=0,)
-                        dict = pd.DataFrame(item,index=[0])
-                        dict.to_excel(writer, sheet_name=sheet_name,startrow=1, startcol=0,)
 
-                    for idx, item in enumerate(st.session_state["multiplepools"]):
-                        header = pd.DataFrame({"Multiple Pool Information":""},index=[0])
-                        header.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=29, startcol=0,)
-                        item.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=30, startcol=0,)
-                        # print(item)
-                    # writer.close()
-                #Write in the plots to the relevant individual sheets
-                buffer.seek(0)  # Reset stream position
-                workbook = load_workbook(buffer)
-                for idx, current_file_name in enumerate(st.session_state["filenameslist"]):
-                    # Load the workbook from the BytesIO stream
+        # Using "with" notation
+        with st.sidebar:
+        #Report generation
+            if st.button("Generate Report"):
+                if "filenameslist" not in st.session_state:
+                    st.write("You must upload a file to generate a report.")
+                #Single page report generation
+                if "multiplepools" in st.session_state and "singlepool_dict_list" in st.session_state:
+                    st.write("Report generating...")
+                    # st.write(st.session_state["multiplepools"])
+                    # flnme = st.text_input('Enter Excel file name (e.g. EPSC_report.xlsx)')
+                    # if flnme != "":
+                    #     if flnme.endswith(".xlsx") == False:  # add file extension if it is forgotten
+                    #         flnme = flnme + ".xlsx"
+                    flnme = "Report.xlsx"
+                    buffer = BytesIO()
+                    with pd.ExcelWriter(buffer) as writer:
+                        #Add "One pool" header to summary
+                        header = pd.DataFrame({"One Pool Information": ""},index=[0])
+                        header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=0,index=False )
+                        single_categories = pd.DataFrame({"n":"","i":""},index=[0])
+                        single_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=1,index=False )
+                        multi_header = pd.DataFrame({"Multi Pool Information": ""}, index=[0])
+                        multi_header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=6, index=False)
+                        multi_categories = pd.DataFrame({"Sheet Name": "", "Pool Number":"","n": "", "i": ""}, index=[0])
+                        multi_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=5, index=False)
+                        for idx, item in enumerate(st.session_state["singlepool_dict_list"]):
+                            sheet_name = st.session_state["filenameslist"][idx]
+                            header = pd.DataFrame({"One Pool Information":""},index=[0])
+                            header.to_excel(writer, sheet_name=sheet_name,startrow=0, startcol=0,)
+                            dict = pd.DataFrame(item,index=[0])
+                            dict.to_excel(writer, sheet_name=sheet_name,startrow=1, startcol=0,)
+                            #Add dict to summary page, removing first column/row for formatting
+                            sheet_name = st.session_state["filenameslist"][idx]
 
-                    # Save the single pool plot to a BytesIO object
-                    image_stream = BytesIO()
-                    single_plot_fig = st.session_state["singlepool_plot_list"][idx]
-                    single_plot_fig.savefig(image_stream, format='png')
-                    image_stream.seek(0)
+                            if 'Sheet Name' not in dict.columns:
+                                dict.insert(0, 'Sheet Name', sheet_name)
+                            dict.to_excel(writer,sheet_name='All Files Summary', startrow=idx+2,startcol=0,header=False, index=False)
 
-                    # Add the plot image to the workbook
-                    # print(f"Current file adding picture to: {current_file_name}")
-                    ws = workbook[current_file_name]
-                    img = Image(image_stream)
-                    img.height = img.height/1.2
-                    img.width = img.width/1.2
-                    ws.add_image(img, 'G1')
+                        for idx, item in enumerate(st.session_state["multiplepools"]):
+                            header = pd.DataFrame({"Multiple Pool Information":""},index=[0])
+                            header.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=29, startcol=0,)
+                            item.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=30, startcol=0,)
+                            sheet_name = st.session_state["filenameslist"][idx]
+                            if 'Sheet Name' not in item.columns:
+                                item.insert(0, 'Sheet Name', sheet_name)
+                            item.to_excel(writer,sheet_name='All Files Summary', startrow=(idx)*(num_pools)+2,startcol=5,header=False,index=False)
 
-                    image_stream = BytesIO()
-                    multi_pool_plot = st.session_state["multiplepools_plot_list"][idx]
-                    multi_pool_plot.savefig(image_stream, format='png')
-                    image_stream.seek(0)
 
-                    # Add the plot image to the workbook
-                    ws = workbook[current_file_name]
-                    img = Image(image_stream)
-                    img.height = img.height/4
-                    img.width = img.width/4
-                    ws.add_image(img, 'G30')
 
-                    # Save the updated workbook to the BytesIO stream
-                final_excel_stream = BytesIO()
-                workbook.save(final_excel_stream)
-                final_excel_stream.seek(0)
-                st.download_button(label="Download Report", data=final_excel_stream, file_name=flnme,
-                                       mime="application/vnd.ms-excel")
+
+                            # print(item)
+                        # writer.close()
+
+                    #Write in the plots to the relevant individual sheets
+                    buffer.seek(0)  # Reset stream position
+                    workbook = load_workbook(buffer)
+                    for idx, current_file_name in enumerate(st.session_state["filenameslist"]):
+                        # Load the workbook from the BytesIO stream
+
+                        # Save the single pool plot to a BytesIO object
+                        image_stream = BytesIO()
+                        single_plot_fig = st.session_state["singlepool_plot_list"][idx]
+                        single_plot_fig.savefig(image_stream, format='png')
+                        image_stream.seek(0)
+
+                        # Add the plot image to the workbook
+                        # print(f"Current file adding picture to: {current_file_name}")
+                        ws = workbook[current_file_name]
+                        img = Image(image_stream)
+                        img.height = img.height/1.2
+                        img.width = img.width/1.2
+                        ws.add_image(img, 'G1')
+
+                        image_stream = BytesIO()
+                        multi_pool_plot = st.session_state["multiplepools_plot_list"][idx]
+                        multi_pool_plot.savefig(image_stream, format='png')
+                        image_stream.seek(0)
+
+                        # Add the plot image to the workbook
+                        ws = workbook[current_file_name]
+                        img = Image(image_stream)
+                        img.height = img.height/4
+                        img.width = img.width/4
+                        ws.add_image(img, 'G30')
+
+                        # Save the updated workbook to the BytesIO stream
+
+                    final_excel_stream = BytesIO()
+                    workbook.save(final_excel_stream)
+                    final_excel_stream.seek(0)
+                    st.download_button(label="Download Report", data=final_excel_stream, file_name=flnme,
+                                           mime="application/vnd.ms-excel")
+                else:
+                    st.write("You must run all analysis items to generate report.")
 
 
 
@@ -392,6 +384,51 @@ def run_multipool_analysis(num_pools):
             if use == True:
                 st.session_state["multiplepools"].append(df)
                 st.session_state["multiplepools_plot_list"].append(fig)
+
+def run_single_pool_analysis(num_pools):
+    if st.session_state.peak_index is None:
+        st.write("Please create template first")
+    else:
+        st.write("Creating graph of one pool...")
+        means, vars = EPSC_App_Connection.one_pool_analysis(st.session_state.EPSCs,
+                                                            st.session_state.peak_index, num_pools,
+                                                            st.session_state.endPoint,
+                                                            st.session_state.template)
+
+        # Fitting function
+        fit_parabola, roots, initial_slope = EPSC_App_Connection.fitting_parabola(means, vars)
+
+        n = roots[0] / initial_slope
+
+        fig, axs = plt.subplots(1, 1)
+        axs.scatter(means, vars, color='black')
+        sorter = np.sort(means)
+        axs.plot(sorter, fit_parabola(sorter), color='black')
+        axs.set_title("Variance vs Mean")
+        axs.set_xlabel("Mean Current (pA)")
+        axs.set_ylabel("Current variance (pA^2)")
+        st.pyplot(fig)
+
+        st.write("Initial Current (i):", initial_slope)
+        st.write("Number of Channels (n):", n)
+
+        single_pool_dict = {"n": n, "i": initial_slope}
+        if "singlepool_dict_list" not in st.session_state:
+            st.session_state["singlepool_dict_list"] = []
+            st.session_state["singlepool_plot_list"] = []
+            st.session_state["singlepool_plot_list"].append(fig)
+            st.session_state["singlepool_dict_list"].append(single_pool_dict)
+        else:
+            for item in st.session_state["singlepool_dict_list"]:
+                if single_pool_dict == item:
+                    use = False
+                else:
+                    use = True
+            if use == True:
+                st.session_state["singlepool_dict_list"].append(single_pool_dict)
+                st.session_state["singlepool_plot_list"].append(fig)
+
+
 
 
 if __name__ == "__main__":
