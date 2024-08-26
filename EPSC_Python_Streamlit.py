@@ -15,18 +15,17 @@ def main():
     if "multiple_pools_list" in st.session_state:
         st.session_state.multiple_pools_list = st.session_state.multiple_pools_list
     st.title("NSFA Analysis App")
+    st.write("A simple webapp designed to run nonstationary fluctuation analysis on excitatory postsynaptic currents.")
     # File upload
-    uploaded_files = st.file_uploader("Upload a file", type=["csv", "txt", "xlsx"], accept_multiple_files=True)
-    if uploaded_files is not None:
-
-        for idx, uploaded_file in enumerate(uploaded_files):
+    st.session_state.uploaded_files = st.file_uploader("Upload a file", type=["csv", "txt", "xlsx"], accept_multiple_files=True)
+    if st.session_state.uploaded_files is not None:
+        for idx, uploaded_file in enumerate(st.session_state.uploaded_files):
             if "filenameslist" in st.session_state:
-                if uploaded_file.name not in st.session_state["filenameslist"]:
+                 if uploaded_file.name not in st.session_state["filenameslist"]:
                     st.session_state["filenameslist"].append(uploaded_file.name)
             else:
                 st.session_state["filenameslist"] = []
                 st.session_state["filenameslist"].append(uploaded_file.name)
-
             with st.expander(f"File: {uploaded_file.name}"):
                 file_extension = uploaded_file.name.split('.')[-1]
                 if file_extension == 'txt':
@@ -39,10 +38,14 @@ def main():
                     st.session_state.EPSCs = st.session_state.EPSCs.to_numpy()
 
                 if file_extension == 'xlsx':
-                    sheet_number = 1
                     sheet_number = st.number_input("Enter sheet number", min_value=0, step=1, key=str(idx) + "select")
                     st.session_state.EPSCs = pd.read_excel(uploaded_file, sheet_name=sheet_number)
                     st.session_state.EPSCs = st.session_state.EPSCs.to_numpy()
+
+                else:
+                    st.write("File-type not recognized")
+
+
 
                 # Display the raw data
                 st.subheader("Raw Data")
@@ -180,103 +183,216 @@ def main():
                     run_multipool_analysis(num_pools)
 
 
+###SIDEBAR LOGIC
 
-
-        # Using "with" notation
+       # Sidebar for bulk report generation
         with st.sidebar:
-        #Report generation
-            if st.button("Generate Report"):
-                if "filenameslist" not in st.session_state:
-                    st.write("You must upload a file to generate a report.")
-                #Single page report generation
-                if "multiplepools" in st.session_state and "singlepool_dict_list" in st.session_state:
-                    st.write("Report generating...")
-                    # st.write(st.session_state["multiplepools"])
-                    # flnme = st.text_input('Enter Excel file name (e.g. EPSC_report.xlsx)')
-                    # if flnme != "":
-                    #     if flnme.endswith(".xlsx") == False:  # add file extension if it is forgotten
-                    #         flnme = flnme + ".xlsx"
-                    flnme = "Report.xlsx"
-                    buffer = BytesIO()
-                    with pd.ExcelWriter(buffer) as writer:
-                        #Add "One pool" header to summary
-                        header = pd.DataFrame({"One Pool Information": ""},index=[0])
-                        header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=0,index=False )
-                        single_categories = pd.DataFrame({"n":"","i":""},index=[0])
-                        single_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=1,index=False )
-                        multi_header = pd.DataFrame({"Multi Pool Information": ""}, index=[0])
-                        multi_header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=6, index=False)
-                        multi_categories = pd.DataFrame({"Sheet Name": "", "Pool Number":"","n": "", "i": ""}, index=[0])
-                        multi_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=5, index=False)
-                        for idx, item in enumerate(st.session_state["singlepool_dict_list"]):
-                            sheet_name = st.session_state["filenameslist"][idx]
-                            header = pd.DataFrame({"One Pool Information":""},index=[0])
-                            header.to_excel(writer, sheet_name=sheet_name,startrow=0, startcol=0,)
-                            dict = pd.DataFrame(item,index=[0])
-                            dict.to_excel(writer, sheet_name=sheet_name,startrow=1, startcol=0,)
-                            #Add dict to summary page, removing first column/row for formatting
-                            sheet_name = st.session_state["filenameslist"][idx]
+            st.subheader("Bulk Report Generation")
+            st.write("Upload files before selecting settings.")
 
-                            if 'Sheet Name' not in dict.columns:
-                                dict.insert(0, 'Sheet Name', sheet_name)
-                            dict.to_excel(writer,sheet_name='All Files Summary', startrow=idx+2,startcol=0,header=False, index=False)
+            if "uploaded_files" not in st.session_state or not st.session_state.uploaded_files:
+                st.write("You must upload at least one file to generate a report.")
+            else:
+                st.session_state.num_pools = st.number_input("Number of Pools",0)
+                st.session_state.time_duration = st.number_input("Time Duration (ms)",0)
 
-                        for idx, item in enumerate(st.session_state["multiplepools"]):
-                            header = pd.DataFrame({"Multiple Pool Information":""},index=[0])
-                            header.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=29, startcol=0,)
-                            item.to_excel(writer, sheet_name=st.session_state["filenameslist"][idx],startrow=30, startcol=0,)
-                            sheet_name = st.session_state["filenameslist"][idx]
-                            if 'Sheet Name' not in item.columns:
-                                item.insert(0, 'Sheet Name', sheet_name)
-                            item.to_excel(writer,sheet_name='All Files Summary', startrow=(idx)*(num_pools)+2,startcol=5,header=False,index=False)
+                # Display uploaded files and select sheets for XLSX files
+                st.write("Select sheets for XLSX files:")
+
+                # Dictionary to store selected sheets for each XLSX file
+                if 'selected_sheets' not in st.session_state:
+                    st.session_state.selected_sheets = {}
+
+                for idx, uploaded_file in enumerate(st.session_state.uploaded_files):
+                    file_name = uploaded_file.name
+                    st.write(f"Processing: {file_name}")
+
+                    # Handle XLSX files
+                    if file_name.endswith(".xlsx"):
+                        excel_file = pd.ExcelFile(uploaded_file)
+                        sheet_names = excel_file.sheet_names
+
+                        # Initialize selected sheets if not already in session state
+                        if file_name not in st.session_state.selected_sheets:
+                            st.session_state.selected_sheets[file_name] = {sheet: False for sheet in sheet_names}
+
+                        for sheet in sheet_names:
+                            selected = st.checkbox(f'{file_name}: Sheet {sheet}',
+                                                   key=f'fileused_{file_name}_Sheet_{sheet}',
+                                                   value=st.session_state.selected_sheets[file_name][sheet])
+                            st.session_state.selected_sheets[file_name][sheet] = selected
+
+                # Action button to run the processing
+                if st.button("Run Processing"):
+                    st.session_state.selected_files = []
+
+                    for uploaded_file in st.session_state.uploaded_files:
+                        file_name = uploaded_file.name
+                        file_extension = file_name.split('.')[-1]
+
+                        if file_extension == 'xlsx':
+                            # Collect selected sheets for the XLSX file
+                            selected_sheets = [sheet for sheet, is_selected in
+                                               st.session_state.selected_sheets[file_name].items() if is_selected]
+                            if selected_sheets:
+                                st.session_state.selected_files.append((uploaded_file, 'xlsx', selected_sheets))
+
+                        elif file_extension in ['csv', 'txt']:
+                            # For non-XLSX files, use an empty list for consistency
+                            st.session_state.selected_files.append((uploaded_file, file_extension, []))
 
 
+                    # Process only the selected files and sheets
+                    for uploaded_file, file_extension, selected_sheets in st.session_state.selected_files:
+                        file_name = uploaded_file.name
 
+                        if file_extension == 'xlsx':
+                            st.write(f"Running action on XLSX file: {file_name} for sheets: {selected_sheets}")
+                            excel_file = pd.ExcelFile(uploaded_file)
 
-                            # print(item)
-                        # writer.close()
+                            for sheet in selected_sheets:
+                                df = pd.read_excel(excel_file, sheet_name=sheet)
+                                st.write(f"Processing sheet: {sheet} in {file_name}")
+                                st.session_state.EPSCs = df.to_numpy()
+                                run_full_analysis(int(st.session_state.num_pools), int(st.session_state.time_duration))
 
-                    #Write in the plots to the relevant individual sheets
-                    buffer.seek(0)  # Reset stream position
-                    workbook = load_workbook(buffer)
-                    for idx, current_file_name in enumerate(st.session_state["filenameslist"]):
-                        # Load the workbook from the BytesIO stream
+                        elif file_extension == 'csv':
+                            st.write(f"Running action on CSV file: {file_name}")
+                            set_EPSCs(uploaded_file, "csv")
+                            run_full_analysis(int(st.session_state.num_pools), int(st.session_state.time_duration))
 
-                        # Save the single pool plot to a BytesIO object
-                        image_stream = BytesIO()
-                        single_plot_fig = st.session_state["singlepool_plot_list"][idx]
-                        single_plot_fig.savefig(image_stream, format='png')
-                        image_stream.seek(0)
+                        elif file_extension == 'txt':
+                            st.write(f"Running action on TXT file: {file_name}")
+                            set_EPSCs(uploaded_file, "txt")
+                            run_full_analysis(int(st.session_state.num_pools), int(st.session_state.time_duration))
 
-                        # Add the plot image to the workbook
-                        # print(f"Current file adding picture to: {current_file_name}")
-                        ws = workbook[current_file_name]
-                        img = Image(image_stream)
-                        img.height = img.height/1.2
-                        img.width = img.width/1.2
-                        ws.add_image(img, 'G1')
+                    st.success("Processing completed!")
 
-                        image_stream = BytesIO()
-                        multi_pool_plot = st.session_state["multiplepools_plot_list"][idx]
-                        multi_pool_plot.savefig(image_stream, format='png')
-                        image_stream.seek(0)
+        # Ensure multiplepools and singlepool_dict_list are in session state
+        if "multiplepools" in st.session_state and "singlepool_dict_list" in st.session_state:
+            st.write("Generating report...")
+            flnme = "Report.xlsx"
+            buffer = BytesIO()
 
-                        # Add the plot image to the workbook
-                        ws = workbook[current_file_name]
-                        img = Image(image_stream)
-                        img.height = img.height/4
-                        img.width = img.width/4
-                        ws.add_image(img, 'G30')
+            # Save data to the ExcelWriter and ensure buffer is correctly formatted
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                # Add headers to the "All Files Summary" sheet
+                # One Pool header
+                header = pd.DataFrame({"One Pool Information": ""}, index=[0])
+                header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=0, index=False)
+                single_categories = pd.DataFrame({"n": "", "i": ""}, index=[0])
+                single_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=1, index=False)
 
-                        # Save the updated workbook to the BytesIO stream
+                # Multi Pool header
+                multi_header = pd.DataFrame({"Multi Pool Information": ""}, index=[0])
+                multi_header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=6, index=False)
+                multi_categories = pd.DataFrame({"Sheet Name": "", "Pool Number": "", "n": "", "i": ""}, index=[0])
+                multi_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=5, index=False)
 
-                    final_excel_stream = BytesIO()
-                    workbook.save(final_excel_stream)
-                    final_excel_stream.seek(0)
-                    st.download_button(label="Download Report", data=final_excel_stream, file_name=flnme,
-                                           mime="application/vnd.ms-excel")
-                else:
-                    st.write("You must run all analysis items to generate report.")
+                # Loop through each single-pool item, now syncing with sheet names
+                for idx, item in enumerate(st.session_state["singlepool_dict_list"]):
+                    if idx < len(st.session_state.selected_files):
+                        uploaded_file, file_extension, selected_sheets = st.session_state.selected_files[idx]
+
+                        file_name = uploaded_file.name
+
+                        if file_extension == 'xlsx':
+                            for sheet in selected_sheets:
+                                item = st.session_state["singlepool_dict_list"][idx]
+                                # Write single pool information to individual sheets
+                                header = pd.DataFrame({"One Pool Information": ""}, index=[0])
+                                header.to_excel(writer, sheet_name=sheet, startrow=0, startcol=0)
+                                df = pd.DataFrame(item, index=[0])
+                                df.to_excel(writer, sheet_name=sheet, startrow=1, startcol=0)
+
+                                # Add data to summary sheet
+                                df.insert(0, 'Sheet Name', f"{file_name} - {sheet}")
+                                df.to_excel(writer, sheet_name='All Files Summary', startrow=idx + 2, startcol=0,
+                                            header=False, index=False)
+                                idx+=1
+
+                        elif file_extension == 'csv':
+                            header = pd.DataFrame({"One Pool Information": ""}, index=[0])
+                            header.to_excel(writer, sheet_name=file_name, startrow=0, startcol=0)
+                            df = pd.DataFrame(item, index=[0])
+                            df.to_excel(writer, sheet_name=file_name, startrow=1, startcol=0)
+                            # Add data to summary sheet
+                            df.insert(0, 'Sheet Name', f"{file_name}")
+                            df.to_excel(writer, sheet_name='All Files Summary', startrow=idx + 2, startcol=0, header=False,
+                                        index=False)
+
+                        elif file_extension == 'txt':
+                            header = pd.DataFrame({"One Pool Information": ""}, index=[0])
+                            header.to_excel(writer, sheet_name=file_name, startrow=0, startcol=0)
+                            df = pd.DataFrame(item, index=[0])
+                            df.to_excel(writer, sheet_name=file_name, startrow=1, startcol=0)
+                            # Add data to summary sheet
+                            df.insert(0, 'Sheet Name', f"{file_name}")
+                            df.to_excel(writer, sheet_name='All Files Summary', startrow=idx + 2, startcol=0, header=False,
+                                        index=False)
+
+                # Loop through each multi-pool item, now syncing with sheet names
+                for idx, item in enumerate(st.session_state["multiplepools"]):
+                    if idx < len(st.session_state.selected_files):
+                        uploaded_file, file_extension, selected_sheets = st.session_state.selected_files[idx]
+                        file_name = uploaded_file.name
+
+                        if file_extension == 'xlsx':
+                            for sheet in selected_sheets:
+                                item = st.session_state["multiplepools"][idx]
+                                # Write multi pool information to individual sheets
+                                header = pd.DataFrame({"Multiple Pool Information": ""}, index=[0])
+                                header.to_excel(writer, sheet_name=sheet, startrow=29, startcol=0)
+                                item.to_excel(writer, sheet_name=sheet, startrow=30, startcol=0)
+
+                                # Add data to summary sheet
+                                # item.insert(0, 'Sheet Name', f"{file_name} - {sheet}")
+                                item.to_excel(writer, sheet_name='All Files Summary',
+                                              startrow=(idx) * st.session_state.num_pools + 2, startcol=6,
+                                              header=False, index=False)
+                                idx +=1
+
+            # Reset buffer to the beginning before loading it with load_workbook
+            buffer.seek(0)
+
+            # Load the workbook correctly
+            workbook = load_workbook(buffer)
+
+            # Add images to the workbook, syncing with file names and sheet names
+            for idx, (uploaded_file, file_extension, selected_sheets) in enumerate(st.session_state.selected_files):
+                file_name = uploaded_file.name
+
+                for sheet in selected_sheets:
+                    # Handle single-pool plot
+                    image_stream = BytesIO()
+                    single_plot_fig = st.session_state["singlepool_plot_list"][idx]
+                    single_plot_fig.savefig(image_stream, format='png')
+                    image_stream.seek(0)
+                    ws = workbook[sheet]
+                    img = Image(image_stream)
+                    img.height /= 1.2
+                    img.width /= 1.2
+                    ws.add_image(img, 'G1')
+
+                    # Handle multi-pool plot
+                    image_stream = BytesIO()
+                    multi_pool_plot = st.session_state["multiplepools_plot_list"][idx]
+                    multi_pool_plot.savefig(image_stream, format='png')
+                    image_stream.seek(0)
+                    img = Image(image_stream)
+                    img.height /= 4
+                    img.width /= 4
+                    ws.add_image(img, 'G30')
+                    idx +=1
+
+                # Save the final Excel file
+                final_excel_stream = BytesIO()
+                workbook.save(final_excel_stream)
+                final_excel_stream.seek(0)
+
+                # Provide a download button
+                st.download_button(label="Download Report", data=final_excel_stream, file_name=flnme,
+                                   mime="application/vnd.ms-excel")
 
 
 
@@ -306,7 +422,20 @@ def to_excel(df, sheet_name):
     processed_data = output.getvalue()
     return processed_data
 
-def run_multipool_analysis(num_pools):
+
+def run_full_analysis(num_pools,time_duration): #A catch-all function to run multipool, single, and template analysis
+    num_samples = st.session_state.EPSCs.shape[0]
+    timepoints, st.session_state.template = EPSC_App_Connection.create_template(st.session_state.EPSCs,
+                                                                                time_duration,
+                                                                                num_samples)
+    st.session_state.endPoint = st.session_state.template.shape[0] - 1
+    st.session_state.peak_index = np.argmax(st.session_state.template)
+    run_multipool_analysis(num_pools=num_pools,display_plots=False,report_generation=True)
+    run_single_pool_analysis(num_pools=num_pools, display_plots=False, report_generation=True)
+
+
+
+def run_multipool_analysis(num_pools,display_plots=True,report_generation=False):
     if st.session_state.peak_index is None:
         st.write("Please create template first")
     else:
@@ -366,30 +495,53 @@ def run_multipool_analysis(num_pools):
             n = roots[0] / initial_slope
 
             table_data.append([f'{i + 1}', n, initial_slope])
-        st.pyplot(fig)
         df = pd.DataFrame(table_data, columns=['Pool Number', 'n', 'i'])
-        st.table(df)
-        if "multiplepools" not in st.session_state:
-            st.session_state["multiplepools"] = []
-            st.session_state["multiplepools_plot_list"] = []
-            st.session_state["multiplepools_plot_list"].append(fig)
+        if display_plots == True:
+            st.pyplot(fig)
+            st.table(df)
 
-            st.session_state["multiplepools"].append(df)
-        else:
-            for item in st.session_state["multiplepools"]:
-                if df.equals(item):
-                    use = False
-                else:
-                    use = True
-            if use == True:
-                st.session_state["multiplepools"].append(df)
+        if report_generation:
+            if "multiplepools" not in st.session_state:
+                st.session_state["multiplepools"] = []
+                st.session_state["multiplepools_plot_list"] = []
                 st.session_state["multiplepools_plot_list"].append(fig)
 
-def run_single_pool_analysis(num_pools):
+                st.session_state["multiplepools"].append(df)
+            else:
+                for item in st.session_state["multiplepools"]:
+                    if df.equals(item):
+                        use = False
+                    else:
+                        use = True
+                if use == True:
+                    st.session_state["multiplepools"].append(df)
+                    st.session_state["multiplepools_plot_list"].append(fig)
+def set_EPSCs(uploaded_file, file_extension):
+    if file_extension == 'txt':
+        uploaded_file.seek(0)  # Reset file pointer before reading
+        read_data = uploaded_file.read().decode("utf-8")
+        data = np.loadtxt(read_data.splitlines(), dtype=float)
+        st.session_state.EPSCs = data[:, :]
+
+    elif file_extension == 'csv':
+        uploaded_file.seek(0)  # Reset file pointer before reading
+        st.session_state.EPSCs = pd.read_csv(uploaded_file)
+        st.session_state.EPSCs = st.session_state.EPSCs.to_numpy()
+
+    elif file_extension == 'xlsx':
+        sheet_number = st.number_input("Enter sheet number", min_value=0, step=1, key=str(uploaded_file.name) + "select")
+        uploaded_file.seek(0)  # Reset file pointer before reading
+        st.session_state.EPSCs = pd.read_excel(uploaded_file, sheet_name=sheet_number)
+        st.session_state.EPSCs = st.session_state.EPSCs.to_numpy()
+
+    # st.write("Finished Setting EPSCS")
+
+
+def run_single_pool_analysis(num_pools,display_plots=True,report_generation=False):
     if st.session_state.peak_index is None:
         st.write("Please create template first")
     else:
-        st.write("Creating graph of one pool...")
+        # st.write("Creating graph of one pool...")
         means, vars = EPSC_App_Connection.one_pool_analysis(st.session_state.EPSCs,
                                                             st.session_state.peak_index, num_pools,
                                                             st.session_state.endPoint,
@@ -407,26 +559,27 @@ def run_single_pool_analysis(num_pools):
         axs.set_title("Variance vs Mean")
         axs.set_xlabel("Mean Current (pA)")
         axs.set_ylabel("Current variance (pA^2)")
-        st.pyplot(fig)
-
-        st.write("Initial Current (i):", initial_slope)
-        st.write("Number of Channels (n):", n)
+        if display_plots == True:
+            st.pyplot(fig)
+            st.write("Initial Current (i):", initial_slope)
+            st.write("Number of Channels (n):", n)
 
         single_pool_dict = {"n": n, "i": initial_slope}
-        if "singlepool_dict_list" not in st.session_state:
-            st.session_state["singlepool_dict_list"] = []
-            st.session_state["singlepool_plot_list"] = []
-            st.session_state["singlepool_plot_list"].append(fig)
-            st.session_state["singlepool_dict_list"].append(single_pool_dict)
-        else:
-            for item in st.session_state["singlepool_dict_list"]:
-                if single_pool_dict == item:
-                    use = False
-                else:
-                    use = True
-            if use == True:
-                st.session_state["singlepool_dict_list"].append(single_pool_dict)
+        if report_generation:
+            if "singlepool_dict_list" not in st.session_state:
+                st.session_state["singlepool_dict_list"] = []
+                st.session_state["singlepool_plot_list"] = []
                 st.session_state["singlepool_plot_list"].append(fig)
+                st.session_state["singlepool_dict_list"].append(single_pool_dict)
+            else:
+                for item in st.session_state["singlepool_dict_list"]:
+                    if single_pool_dict == item:
+                        use = False
+                    else:
+                        use = True
+                if use == True:
+                    st.session_state["singlepool_dict_list"].append(single_pool_dict)
+                    st.session_state["singlepool_plot_list"].append(fig)
 
 
 
