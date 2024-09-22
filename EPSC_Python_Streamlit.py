@@ -158,6 +158,7 @@ def main():
                     # Plot the result
                     st.subheader("Template Result")
                     st.write("Creating Template...")
+                    st.write(f"Peak Value: {st.session_state.template[st.session_state.peak_index]}")
                     fig, axs = plt.subplots(2, 1)
                     axs[0].plot(timepoints, st.session_state.template)
                     axs[0].set_xlabel("Time(ms)")
@@ -288,6 +289,12 @@ def main():
                 multi_header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=6, index=False)
                 multi_categories = pd.DataFrame({"Sheet Name": "", "Pool Number": "", "n": "", "i": ""}, index=[0])
                 multi_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=5, index=False)
+
+                # # Template header
+                # template_header = pd.DataFrame({"Template Information": ""}, index=[0])
+                # template_header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=12, index=False)
+                # template_categories = pd.DataFrame({"Peak Value": ""}, index=[0])
+                # template_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=12, index=False)
 
                 # Loop through each single-pool item, now syncing with sheet names
                 for idx, item in enumerate(st.session_state["singlepool_dict_list"]):
@@ -564,7 +571,7 @@ def run_single_pool_analysis(num_pools,display_plots=True,report_generation=Fals
             st.write("Initial Current (i):", initial_slope)
             st.write("Number of Channels (n):", n)
 
-        single_pool_dict = {"n": n, "i": initial_slope}
+        single_pool_dict = {"n": n, "i": initial_slope, "template_peak":st.session_state.template[st.session_state.peak_index]}
         if report_generation:
             if "singlepool_dict_list" not in st.session_state:
                 st.session_state["singlepool_dict_list"] = []
