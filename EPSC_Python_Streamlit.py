@@ -250,11 +250,21 @@ def main():
                         if file_extension == 'xlsx':
                             st.write(f"Running action on XLSX file: {file_name} for sheets: {selected_sheets}")
                             excel_file = pd.ExcelFile(uploaded_file)
+                            max_df = pd.DataFrame()
 
                             for sheet in selected_sheets:
                                 df = pd.read_excel(excel_file, sheet_name=sheet)
                                 st.write(f"Processing sheet: {sheet} in {file_name}")
                                 st.session_state.EPSCs = df.to_numpy()
+
+                                max_vals = st.session_state.EPSCs.max(axis=0)
+                                temp_df = pd.DataFrame(max_vals, columns=[f'Sheet Names'])
+                                temp_df['Array_Names'] = sheet
+
+                                # Append the results to the main DataFrame
+                                max_df = pd.concat([max_df, temp_df], axis=1)
+
+
                                 run_full_analysis(int(st.session_state.num_pools), int(st.session_state.time_duration))
 
                         elif file_extension == 'csv':
@@ -290,12 +300,10 @@ def main():
                 multi_categories = pd.DataFrame({"Sheet Name": "", "Pool Number": "", "n": "", "i": ""}, index=[0])
                 multi_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=5, index=False)
 
-                # # Template header
-                # template_header = pd.DataFrame({"Template Information": ""}, index=[0])
-                # template_header.to_excel(writer, sheet_name='All Files Summary', startrow=0, startcol=12, index=False)
-                # template_categories = pd.DataFrame({"Peak Value": ""}, index=[0])
-                # template_categories.to_excel(writer, sheet_name='All Files Summary', startrow=1, startcol=12, index=False)
-
+                # Template header
+                template_header = pd.DataFrame({"EPSC Max Info": ""}, index=[0])
+                template_header.to_excel(writer, sheet_name='EPSCs Maximums', startrow=0, startcol=0, index=False)
+                max_df.to_excel(writer, sheet_name='EPSCs Maximums', startrow=0, startcol=0, index=False)
                 # Loop through each single-pool item, now syncing with sheet names
                 for idx, item in enumerate(st.session_state["singlepool_dict_list"]):
                     if idx < len(st.session_state.selected_files):
@@ -549,6 +557,10 @@ def run_single_pool_analysis(num_pools,display_plots=True,report_generation=Fals
         st.write("Please create template first")
     else:
         # st.write("Creating graph of one pool...")
+
+
+
+        st.write(st.session_state.EPSCs.shape)
         means, vars = EPSC_App_Connection.one_pool_analysis(st.session_state.EPSCs,
                                                             st.session_state.peak_index, num_pools,
                                                             st.session_state.endPoint,
