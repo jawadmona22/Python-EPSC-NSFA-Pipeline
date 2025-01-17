@@ -229,10 +229,10 @@ def create_segment_indices(num_traces,EPSCs_sorted,template):
     st.write(template)
     optimized_scale_factors = []
     sum_residuals = []
+    st.write("Raw data")
+    st.write(EPSCs_sorted)
     for i in range(num_traces):
         raw_data = EPSCs_sorted[:, i]
-        st.write(f"Raw data {i}")
-        st.write(raw_data)
         # Define bounds for the scale factor
         scale_factor_bounds = (0.85, 1.17)
 
