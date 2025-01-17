@@ -177,7 +177,11 @@ def visualize_size_pools(EPSCs,num_pools):
     return trace_bins
 
 def sort_EPSCs_by_size(EPSCs,peak_index):
+    st.write("Peak Index")
+    st.write(peak_index)
     raw_sorted = EPSCs[:, EPSCs[peak_index, :].argsort()]
+    st.write("Raw Sorted from funct")
+    st.write(raw_sorted)
     return raw_sorted
 
 def create_pool_indices(EPSCs, peak_index,num_pools):
