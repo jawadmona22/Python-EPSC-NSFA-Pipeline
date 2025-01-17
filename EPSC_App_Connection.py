@@ -225,11 +225,14 @@ def create_residual_array(scale_factor, raw, average):
     term1 = (raw - average * scale_factor * (max_raw / max_average)) ** 2
     return term1
 def create_segment_indices(num_traces,EPSCs_sorted,template):
-
+    st.write("Template")
+    st.write(template)
     optimized_scale_factors = []
     sum_residuals = []
     for i in range(num_traces):
         raw_data = EPSCs_sorted[:, i]
+        st.write(f"Raw data {i}")
+        st.write(raw_data)
         # Define bounds for the scale factor
         scale_factor_bounds = (0.85, 1.17)
 
