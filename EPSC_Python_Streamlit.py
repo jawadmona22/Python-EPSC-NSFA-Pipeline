@@ -574,6 +574,8 @@ def run_single_pool_analysis(num_pools,display_plots=True,report_generation=Fals
         fig, axs = plt.subplots(1, 1)
         axs.scatter(means, vars, color='black')
         sorter = np.sort(means)
+        st.write(sorter)
+        st.write(fit_parabola(sorter))
         axs.plot(sorter, fit_parabola(sorter), color='black')
         axs.set_title("Variance vs Mean")
         axs.set_xlabel("Mean Current (pA)")
