@@ -223,8 +223,6 @@ def create_residual_array(scale_factor, raw, average):
     max_raw = np.max(raw)
     max_average = np.max(average)
     term1 = (raw - average * scale_factor * (max_raw / max_average)) ** 2
-    st.write(term1)
-
     return term1
 def create_segment_indices(num_traces,EPSCs_sorted,template):
 
@@ -248,7 +246,8 @@ def create_segment_indices(num_traces,EPSCs_sorted,template):
 
     # sum_residuals = np.array(sum_residuals)  ## Equal to row 9632 of sheet 1, part 1
     optimized_scale_factors = np.array(optimized_scale_factors)
-
+    st.write("Scale Factors")
+    st.write(optimized_scale_factors)
 
     residuals_array = np.copy(EPSCs_sorted)
     for i in range(num_traces):
