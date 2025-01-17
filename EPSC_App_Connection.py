@@ -68,16 +68,6 @@ def mean_calculation(raw_sorted, peak_index, endPoint, segment_indices, pool_ind
 
 
 def var_calculation(peak_index, residuals_array, segment_indices, pool_indices, endPoint, analysis_type):
-    st.write("Peak Index")
-    st.write(peak_index)
-    st.write("Residuals")
-    st.write(residuals_array)
-    st.write("Segments")
-    st.write(segment_indices)
-    st.write("Pools")
-    st.write(pool_indices)
-    st.write("Endpoint")
-    st.write(endPoint)
     decay_begin = peak_index + 1  # Starts one time point after the peak
     if len(residuals_array.shape) == 1:
         print("Calculating variance of 1D data")
@@ -233,6 +223,8 @@ def create_residual_array(scale_factor, raw, average):
     max_raw = np.max(raw)
     max_average = np.max(average)
     term1 = (raw - average * scale_factor * (max_raw / max_average)) ** 2
+    st.write(term1)
+
     return term1
 def create_segment_indices(num_traces,EPSCs_sorted,template):
 
