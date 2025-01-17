@@ -2,6 +2,7 @@ from scipy.optimize import minimize_scalar
 from scipy.optimize import curve_fit
 from sklearn.model_selection import KFold
 import numpy as np
+import streamlit as st
 
 #Initialize some values
 num_decay_segments = 20
@@ -67,6 +68,16 @@ def mean_calculation(raw_sorted, peak_index, endPoint, segment_indices, pool_ind
 
 
 def var_calculation(peak_index, residuals_array, segment_indices, pool_indices, endPoint, analysis_type):
+    st.write("Peak Index")
+    st.write(peak_index)
+    st.write("Residuals")
+    st.write(residuals_array)
+    st.write("Segments")
+    st.write(segment_indices)
+    st.write("Pools")
+    st.write(pool_indices)
+    st.write("Endpoint")
+    st.write(endPoint)
     decay_begin = peak_index + 1  # Starts one time point after the peak
     if len(residuals_array.shape) == 1:
         print("Calculating variance of 1D data")
