@@ -99,7 +99,7 @@ def main():
                         min_checked_data = st.session_state.EPSCs
                         count_peak = 0
                     if peak_align:
-                        aligned_data, count_aligned = EPSC_preprocessing.check_peak_alignment(min_checked_data,
+                        aligned_data, count_aligned = EPSC_preprocessing.align_peaks(min_checked_data,
                                                                                               peak_index)
                     else:
                         aligned_data = min_checked_data
@@ -258,7 +258,7 @@ def main():
                                 st.session_state.EPSCs = df.to_numpy()
 
                                 max_vals = st.session_state.EPSCs.max(axis=0)
-                                temp_df = pd.DataFrame(max_vals, columns=[f'Sheet Names'])
+                                temp_df = pd.DataFrame(max_vals, columns=[f'Maximum EPSC value'])
                                 temp_df['Array_Names'] = sheet
 
                                 # Append the results to the main DataFrame

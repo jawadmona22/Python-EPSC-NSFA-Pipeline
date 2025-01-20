@@ -23,6 +23,30 @@ def check_peak_alignment(unprocessed_EPSCs, peak_index):
         processed_EPSCs = np.delete(processed_EPSCs, col_idx, axis=1)
     return processed_EPSCs,count
 
+#Actually align peaks
+def align_peaks(unprocessed_EPSCs, peak_index):
+    # Create a copy to avoid modifying the original data
+    processed_EPSCs = np.zeros_like(unprocessed_EPSCs)
+
+    # Iterate through columns
+    for col_idx, col in enumerate(unprocessed_EPSCs.T):
+        # Find the index of the maximum value in the column
+        max_index = np.argmax(col)
+
+        # Calculate the shift required to align the peak
+        shift = peak_index - max_index
+
+        if shift > 0:
+            # Shift downwards (add leading zeros)
+            processed_EPSCs[:, col_idx] = np.pad(col, (shift, 0), mode='constant')[:len(col)]
+        elif shift < 0:
+            # Shift upwards (add trailing zeros)
+            processed_EPSCs[:, col_idx] = np.pad(col, (0, -shift), mode='constant')[:len(col)]
+        else:
+            # No shift needed
+            processed_EPSCs[:, col_idx] = col
+
+    return processed_EPSCs, 0
 
 
 #Checkpoint 2: Minimum Peak Amplitude (absolute)
