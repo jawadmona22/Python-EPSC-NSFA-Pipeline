@@ -575,8 +575,6 @@ def run_single_pool_analysis(num_pools,display_plots=True,report_generation=Fals
         axs.scatter(means, vars, color='black')
         sorter = np.sort(means)
         axs.plot(sorter, fit_parabola(sorter), color='black')
-        st.write(sorter)
-        st.write(fit_parabola(sorter))
         axs.set_title("Variance vs Mean")
         axs.set_xlabel("Mean Current (pA)")
         axs.set_ylabel("Current variance (pA^2)")
