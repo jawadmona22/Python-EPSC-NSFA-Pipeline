@@ -74,7 +74,6 @@ def rise_times_histogram_creator(df,folder_name,plt_show = False):
         if time_90 != None and time_10 != None:
             rise_time = time_90 - time_10
             rise_times.append(rise_time*.02) #Conversion to seconds
-            print(rise_time*.02)
         else:
             print("Invalid trace, rise_time is none")
 
@@ -120,7 +119,65 @@ def cdf_generator(data,folder_name,plt_show=False):
 
 
 
-def multiple_cdf_generator(datasets,labels,folder_name,plt_show=False,plt_type = "",data_type = "",unit = "",use_mean=True):
+def generate_meanECDF_data(file_name,folder_name, use_mean=True,use_median=False,plt_show=False):  #This file should be a .xlsx spreadsheet with tabs labeled with the names of the cells
+    if use_median:
+        print("Using median")
+    """Generate a dataset that follows the given CDF."""
+    ###STEP 1: Generate Mean CDF Data ####
+    # ##Many CDF generation
+    exp_rise_times = []
+    exp_amplitudes = []
+    exp_taus = []
+    sheet_names = []
+    #####Experimental values generation#####
+    for sheet in tqdm(range(0,10)):
+        EPSCs = pd.read_excel(file_name, sheet_name=sheet)
+        excel_file = pd.ExcelFile(file_name)
+        all_sheet_names = excel_file.sheet_names
+        sheet_name = all_sheet_names[sheet]
+        sheet_names.append(sheet_name)
+
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        max_amplitudes = amplitude_histogram_creator(EPSCs, folder_name, False)
+        rise_times = rise_times_histogram_creator(EPSCs, folder_name, False)
+        taus_array = tau_graph_generator(EPSCs, folder_name, False)
+
+        exp_rise_times.append(rise_times)
+        exp_amplitudes.append(max_amplitudes)
+        exp_taus.append(taus_array)
+
+    #These are the target_x and cdf for the mean CDF of a given type. target_x is a list of x values, target_cdf is a list of probability values for those xs
+    rise_target_x, rise_target_cdf = multiple_cdf_generator(exp_rise_times,labels=sheet_names,folder_name=folder_name,plt_show=plt_show, plt_type="Experimental ",data_type="Rise Times",unit="(ms)",use_mean=use_mean,use_median=use_median)
+    amp_target_x, amp_target_cdf = multiple_cdf_generator(exp_amplitudes,labels=sheet_names,folder_name=folder_name,plt_show=plt_show, plt_type="Experimental ",data_type="Peak Amplitude",unit="(pA)",use_mean=use_mean,use_median=use_median)
+    tau_target_x, tau_target_cdf = multiple_cdf_generator(exp_taus,labels=sheet_names,folder_name=folder_name,plt_show=plt_show, plt_type="Experimental ",data_type="Decay Tau",unit="",use_mean=use_mean,use_median=use_median)
+
+
+    max_length = max(len(rise_target_x), len(amp_target_x), len(tau_target_x), len(rise_target_cdf),
+                     len(amp_target_cdf), len(tau_target_cdf))
+    # Pad with np.concatenate
+    rise_target_x = np.concatenate([rise_target_x, np.full((max_length - len(rise_target_x),), np.nan)])
+    amp_target_x = np.concatenate([amp_target_x, np.full((max_length - len(amp_target_x),), np.nan)])
+    tau_target_x = np.concatenate([tau_target_x, np.full((max_length - len(tau_target_x),), np.nan)])
+    rise_target_cdf = np.concatenate([rise_target_cdf, np.full((max_length - len(rise_target_cdf),), np.nan)])
+    amp_target_cdf = np.concatenate([amp_target_cdf, np.full((max_length - len(amp_target_cdf),), np.nan)])
+    tau_target_cdf = np.concatenate([tau_target_cdf, np.full((max_length - len(tau_target_cdf),), np.nan)])
+
+    cdf_df = pd.DataFrame({
+        'rise_x':rise_target_x ,
+        'amp_x': amp_target_x,
+        'tau_x': tau_target_x,
+        'rise_cdf':rise_target_cdf,
+        'amp_cdf': amp_target_cdf,
+        'tau_cdf':tau_target_cdf
+
+    })
+
+    return cdf_df
+
+
+def multiple_cdf_generator(datasets,labels,folder_name,plt_show=True,plt_type = "",data_type = "",unit = "",use_mean=True,use_median=False):
     plt.figure()
 
     all_sorted_data = []
@@ -138,14 +195,25 @@ def multiple_cdf_generator(datasets,labels,folder_name,plt_show=False,plt_type =
     common_x_values = np.unique(np.concatenate(all_sorted_data))
 
     # Compute the mean ECDF on these common x-values
+
+    median_ecdf = np.zeros_like(common_x_values)
     mean_ecdf = np.zeros_like(common_x_values)
+    
 
     for i, x_value in enumerate(common_x_values):
         # Interpolate each ECDF to the common x-values (sorted data)
         values_at_x = [np.interp(x_value, sorted_data, cdf) for sorted_data, cdf in zip(all_sorted_data, all_ecdfs)]
         mean_ecdf[i] = np.mean(values_at_x)
+        median_ecdf[i] = np.median(values_at_x)
     if use_mean:
         plt.plot(common_x_values, mean_ecdf, label="Mean ECDF", color='black', linewidth=3)
+    if use_median:
+        plt.plot(common_x_values, median_ecdf, label="Median ECDF", color='red', linewidth=3)
+        median_df = pd.DataFrame({
+            'x_values': common_x_values,
+            'median_ecdf': median_ecdf
+        })
+        median_df.to_excel(f'{folder_name}/median_ecdf.xlsx', index=False)
     plt.title(f"Empirical Cumulative Density Functions - {plt_type + data_type}")
     plt.xlabel(f"{data_type + ' ' + unit}")
     plt.ylabel("ECDF")

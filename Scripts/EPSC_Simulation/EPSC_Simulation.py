@@ -4,16 +4,20 @@ import math
 import random
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-def Agonist_Pulse(glutamate_scale = 1):
+def Agonist_Pulse(glutamate_scale = 1,steady=False):
     AgPulse = np.zeros((2000))
-    for i in range (10,1000):
-        t = (i-9) * 0.00002
-        AgPulse[i] = (5 * (1 - math.exp(-t / 0.000000002))) * math.exp(-t / 0.00002)
-        AgPulse[i] = 1000 * glutamate_scale* AgPulse[i] #This makes the peak 1839.3972058572117 micro molar (1.839 mM)
-        AgPulse[i] = AgPulse[i]/1.8393972058572117 #Now we have 1.0 mM
-        if AgPulse[i] < .001:
-            AgPulse[i] = 0
-
+    if steady == True:
+        for i in range (10,2000):
+            AgPulse[i] = 1000
+    
+    else:
+        for i in range (10,1000):
+            t = (i-9) * 0.00002
+            AgPulse[i] = (5 * (1 - math.exp(-t / 0.000000002))) * math.exp(-t / 0.00002)
+            AgPulse[i] = 1000 * glutamate_scale* AgPulse[i] #This makes the peak 1839.3972058572117 micro molar (1.839 mM)
+            AgPulse[i] = AgPulse[i]/1.8393972058572117 #Now we have 1.0 mM
+            if AgPulse[i] < .001:
+                AgPulse[i] = 0
     return AgPulse
 
 
@@ -243,7 +247,7 @@ def pick_glutamate_scale(glutamate_params, method="normal", mog_params=None): #s
 
 
 
-def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],current_params = [],file_path=None):
+def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],current_params = [],output_file_path=None,folder_path = None,agonist_steady=False):
     channel_distribution = channel_params["distribution_type"][0]
     glut_distribution = glutamate_params["distribution_type"][0]
     channel_sd = channel_params["channel_sd"][0]
@@ -270,7 +274,7 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
             else:
                 glutamate_scale = pick_glutamate_scale(glutamate_params)
             glutamate_tracker.append(glutamate_scale)
-            AgPulse = Agonist_Pulse(glutamate_scale)
+            AgPulse = Agonist_Pulse(glutamate_scale,steady=agonist_steady)
             indx = 1
             # AgScale = random.uniform(1, 2)
             # AgPulseScaled = AgScale * AgPulse
@@ -335,7 +339,9 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
             all_EPSCs.append(single_EPSC)
     plt.xlabel("Time (ms)")
     plt.ylabel("Current (pA)")
-    plt.savefig(f"C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/RiseTime_Pooling_Investigation/{channel_distribution}_channels_{glut_distribution}_glut_rawEPSCs.png")
+    if folder_path == None:
+        folder_path = "C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/"
+    plt.savefig(f"{channel_distribution}_channels_{glut_distribution}_glut_rawEPSCs.png")
     EPSCs_df = pd.DataFrame(all_EPSCs)
 
     channel_data_df = pd.DataFrame({
@@ -343,10 +349,10 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
         "Open Channels": all_open_channel_nums,
         "Glutamate Concentration":glutamate_tracker
     })
-    if file_path == None:
+    if output_file_path == None:
         print("No file path specified. Using the last known...")
-        file_path = f'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/CP_CI_Ratio_Investigation/EPSCs_CP_Ratio-0-Multiplier-3.xlsx'
-    with pd.ExcelWriter(file_path,engine='xlsxwriter') as writer:
+        output_file_path = f'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/CP_CI_Ratio_Investigation/EPSCs_CP_Ratio-0-Multiplier-3.xlsx'
+    with pd.ExcelWriter(output_file_path,engine='xlsxwriter') as writer:
         EPSCs_df.T.to_excel(writer, sheet_name="EPSCs", index=False, header=False)
         channel_data_df.to_excel(writer, sheet_name="Channel Data", index=False)
     return EPSCs_df,all_total_channel_nums,channel_data_df
