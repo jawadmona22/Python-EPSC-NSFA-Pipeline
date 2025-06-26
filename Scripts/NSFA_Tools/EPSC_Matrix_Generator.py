@@ -60,55 +60,85 @@ uniform_channel_params = {
     "file_name": "C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/EPSCs-uniformchannels.pkl",
     "folder_name": "C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/"
 }
-def matrix_generator(params,first_sheet=True): #Where params is a dictionary of parameters
+def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where params is a dictionary of parameters
     matrix = []
-    if params["file_name"].split('.')[-1] == 'xlsx':
-        excel_file = pd.ExcelFile(f"{params['file_name']}")
-    if first_sheet:
-        print(excel_file.sheet_names)
-        sheet_names = [excel_file.sheet_names[0]]
+    if not params["direct_df_input"]:
+        if params["file_name"].split('.')[-1] == 'xlsx':
+            excel_file = pd.ExcelFile(f"{params['file_name']}")
+        if first_sheet:
+            sheet_names = [excel_file.sheet_names[0]]
+        else:
+            sheet_names = excel_file.sheet_names
     else:
-        sheet_names = excel_file.sheet_names
-
-    # else:
+        sheet_names = params["sheet_names"]
+    workflow_report = {'files processed':sheet_names}
     for sheet_name in tqdm(sheet_names, desc="Processing Excel files", unit="file"):
-        epscs = pd.read_excel(params["file_name"],sheet_name=sheet_name)
+        workflow_report[sheet_name] = {}
+        if not params["direct_df_input"]:
+            epscs = pd.read_excel(params["file_name"],sheet_name=sheet_name)
+        else:
+            epscs = params["EPSCs"]
         epscs = epscs.to_numpy()
         folder_name = params["folder_name"]
-        time_duration = 12  #ms
+        time_duration = 16  #ms
         num_samples = epscs.shape[0]
         print(f"Shape of EPSCs: {epscs.shape}")
         ##Plotting the raw EPSCs, unchanged
-        fig, axs = plt.subplots(1, 1)
-        timepoints = np.linspace(0, time_duration, num_samples)
-        for i in range(epscs.shape[1]):
-            axs.plot(timepoints, epscs[:, i], label=f'Trace {i + 1}')
-        axs.set_xlabel('Time (ms)', fontsize=13)
-        axs.set_ylabel('Current (pA)', fontsize=13)
-        axs.set_title('EPSCs Before Processing')
-        plt.savefig(f'{folder_name}Raw_EPSCs_{sheet_name}.png')
+
+        if save_figs:
+            fig, axs = plt.subplots(1, 1)
+            timepoints = np.linspace(0, time_duration, num_samples)
+            for i in range(epscs.shape[1]):
+                axs.plot(timepoints, epscs[:, i], label=f'Trace {i + 1}')
+            axs.set_xlabel('Time (ms)', fontsize=13)
+            axs.set_ylabel('Current (pA)', fontsize=13)
+            axs.set_title('EPSCs Before Processing')
+            plt.savefig(f'{folder_name}Raw_EPSCs_{sheet_name}.png')
+            workflow_report[sheet_name]['raw_epsc_fig_path'] = f'{folder_name}Raw_EPSCs_{sheet_name}.png'
+
 
         ##Implementing alignment options
         #for each alignment option:
         for alignment_type in params["alignment"]:
-            #Align the raw traces
-            alignment_processed, peak_index = EPSC_preprocessing.align_peaks(epscs)
-
+            workflow_report[sheet_name][alignment_type] = {}
             if alignment_type == "peak":
                 alignment_processed, peak_index = EPSC_preprocessing.align_peaks(epscs)
                 start_point = peak_index
+
+
             elif alignment_type == "midpoint":
                 alignment_processed = EPSC_preprocessing.align_midpoint(epscs)
                 start_point = 15
             elif alignment_type == "max_dv_dt":
-                alignment_processed = EPSC_preprocessing.align_dv_dt(epscs)
+                alignment_processed = EPSC_preprocessing.align_dv_dt(epscs,debug=debug)
                 start_point = 15
 
+
+            if save_figs:
+                fig, axs = plt.subplots(1, 2)
+                timepoints = np.linspace(0, time_duration, num_samples)
+                for i in range(epscs.shape[1]):
+                    axs[0].plot(timepoints, epscs[:, i], label=f'Trace {i + 1}')
+                    axs[1].plot(timepoints, alignment_processed[:, i], label=f'Trace {i + 1}')
+                axs[0].axvline(x=15 * .02, color='red', linestyle='--', linewidth=2, label='Alignment Point')
+                axs[0].set_xlabel('Time (ms)', fontsize=13)
+                axs[0].set_ylabel('Current (pA)', fontsize=13)
+                axs[0].set_title('EPSCs Before Alignment')
+                axs[1].axvline(x=15 * .02, color='red', linestyle='--', linewidth=2, label='Alignment Point')
+                axs[1].set_xlabel('Time (ms)', fontsize=13)
+                axs[1].set_ylabel('Current (pA)', fontsize=13)
+                axs[1].set_title(f'EPSCs After Alignment: {alignment_type}')
+                plt.savefig(f'{folder_name}{alignment_type}_Alignment.png')
+            if debug:
+                plt.show()
+                workflow_report[sheet_name][alignment_type]['image'] = f'{folder_name}{alignment_type}_Alignment.png'
             #Create the template
             timepoints, template = EPSC_App_Connection.create_template(alignment_processed,time_duration,num_samples)
+            # workflow_report[sheet_name][alignment_type]['template_data'] = template
+            workflow_report[sheet_name][alignment_type]['template_image'] = f'{folder_name}{alignment_type}_Alignment.png'
             template_max = np.max(template)
             peak_index = np.argmax(template)
-            print(f"Template max: {template_max} and {template[peak_index]}")
+            # print(f"Template max: {template_max} and {template[peak_index]}")
 
             #Set some variables for the analysis
             pool_indices = EPSC_App_Connection.create_pool_indices(alignment_processed, peak_index)
@@ -120,7 +150,7 @@ def matrix_generator(params,first_sheet=True): #Where params is a dictionary of 
             for scaling_type in params["scaling"]:
                 if scaling_type == "minimize_error":
                     residuals_array = EPSC_App_Connection.create_residuals(num_traces,raw_sorted,template,
-                                                                                                  error_minimize=True)
+                                                                                                  error_minimize=True,debug=debug)
 
                 elif scaling_type == "peak_scaling_at_peak_time":
                     residuals_array = EPSC_App_Connection.create_residuals(num_traces, raw_sorted,
@@ -134,6 +164,18 @@ def matrix_generator(params,first_sheet=True): #Where params is a dictionary of 
                 #For each analysis start point option
                 for start_option in params["analysis_start_point"]:
                     segment_indices = EPSC_App_Connection.create_segment_indices(template, start_option)
+                    plt.figure()
+                    plt.plot(timepoints,template,color='blue')
+                    plt.title("Segment Validation on Template")
+                    plt.xlabel("Time (ms)")
+                    plt.ylabel("Current (pA)")
+                    for index in segment_indices:
+                        plt.axvline(x=(peak_index + index) * .02, color='red', linestyle='--', linewidth=1)
+                    plt.savefig("Segments_Validation.png")
+                    workflow_report[sheet_name][start_option]= 'Segments_Validation.png'
+
+                    if debug:
+                        plt.show()
                     if start_option == "peak_start":
                         #Run mean variance with that start point
                         means = EPSC_App_Connection.mean_calculation(raw_sorted, start_index=peak_index, endPoint=endPoint, segment_indices=segment_indices,
@@ -154,16 +196,19 @@ def matrix_generator(params,first_sheet=True): #Where params is a dictionary of 
                     lin_fit_parabola, lin_roots, lin_initial_slope = EPSC_App_Connection.fitting_parabola(means, vars,force_linear=True)
                     matrix_entry = {"cell_name": sheet_name,"alignment":alignment_type,"analysis_start_point":start_option,"scaling":scaling_type,"linear_i":lin_initial_slope,"parabolic_i":initial_slope,"num_channels":n,"template_max":template_max}
                     matrix.append(matrix_entry)
-                    fig, axs = plt.subplots(1, 1)
-                    axs.scatter(means, vars, color='black')
-                    sorter = np.sort(means)
-                    axs.plot(sorter, fit_parabola(sorter), color='black')
-                    # axs.plot(sorter[0:5], lin_fit_parabola(sorter)[0:5], color='red')
-                    axs.set_title("Variance vs Mean")
-                    axs.set_xlabel("Mean Current (pA)")
-                    axs.set_ylabel("Current variance (pA^2)")
-                    plt.savefig(f"{params['folder_name']}/{alignment_type}_{start_option}_{scaling_type}_{sheet_name}.png")
+                    if save_figs:
+                        fig, axs = plt.subplots(1, 1)
+                        axs.scatter(means, vars, color='black')
+                        sorter = np.sort(means)
+                        axs.plot(sorter, fit_parabola(sorter), color='black')
+                        # axs.plot(sorter[0:5], lin_fit_parabola(sorter)[0:5], color='red')
+                        axs.set_title("Variance vs Mean")
+                        axs.set_xlabel("Mean Current (pA)")
+                        axs.set_ylabel("Current variance (pA^2)")
+
+                        plt.savefig(f"{params['folder_name']}/{alignment_type}_{start_option}_{scaling_type}_{sheet_name}.png")
                     print(matrix_entry)
+    print(workflow_report)
     return matrix
 
 

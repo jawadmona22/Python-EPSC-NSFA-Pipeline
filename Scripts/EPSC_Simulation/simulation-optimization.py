@@ -163,14 +163,16 @@ def optimize_epsc_params(mean_cdf, initial_guess, bounds):
             [{"distribution_type": "normal", "channel_sd": 560, "channel_mean": 1800, "fixed_value": None}])
 
         glutamate_params = pd.DataFrame(
-            [{"gl_mean": 3.5, "gl_sd": 1, "distribution_type": "lognormal", "fixed_value": None}])
-        simulation_EPSCs, num_channels, _ = EPSC_Calc(
-            num_EPSCs=1000,
-            glutamate_params=glutamate_params,
-            channel_params=channel_params
-        )
-        simulation_EPSCs = simulation_EPSCs.T #transpose into correct shape (rows = time)
-        folder_name = 'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/RiseTime_Pooling_Investigation'
+            [{"gl_mean": 3.5, "gl_sd": .5, "distribution_type": "lognormal", "fixed_value": None}])
+        # simulation_EPSCs, num_channels, _ = EPSC_Calc(
+        #     num_EPSCs=1000,
+        #     glutamate_params=glutamate_params,
+        #     channel_params=channel_params
+        # )
+        simulation_EPSCs = pd.read_excel('C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/Simulation_Glu_N_Settings_Investigation/EPSC_Data/normaln_normalglu_c.xlsx',sheet_name=0,index_col=None)
+        # simulation_EPSCs = simulation_EPSCs.T #transpose into correct shape (rows = time)
+
+        folder_name = 'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/Simulation_Glu_N_Settings_Investigation'
         simulation_rise_times = egg.rise_times_histogram_creator(simulation_EPSCs,folder_name=folder_name,plt_show=True)
         simulation_amplitudes = egg.amplitude_histogram_creator(simulation_EPSCs,folder_name=folder_name,plt_show=False)
         simulation_taus = egg.tau_graph_generator(simulation_EPSCs,folder_name=folder_name,plt_show=True)
@@ -323,7 +325,7 @@ if __name__ == "__main__":
     # synth_df = pd.DataFrame(synthetic_samples)
     # mean_cdf_df.to_pickle("mean_cdf_data.pkl")
     mean_cdf = pd.read_pickle("mean_cdf_data.pkl")
-    bounds = [(100,1000),(500,4000),(1,10),(1,15)]
+    bounds = [(100,1000),(500,4000),(.5,10),(1,15)]
     initial_guess = [560,1800,.5,3.5]  # Channel SD, channel Mean, and glutamate SD, glutamate scale Mean
 
     # Run optimization

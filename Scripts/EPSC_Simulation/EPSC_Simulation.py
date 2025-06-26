@@ -4,12 +4,12 @@ import math
 import random
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-def Agonist_Pulse(glutamate_scale = 1,steady=False):
+def Agonist_Pulse(glutamate_scale = 1,steady=False,second_pulse=False):
     AgPulse = np.zeros((2000))
     if steady == True:
         for i in range (10,2000):
-            AgPulse[i] = 1000
-    
+            AgPulse[i] = 1000 * glutamate_scale
+
     else:
         for i in range (10,1000):
             t = (i-9) * 0.00002
@@ -18,6 +18,8 @@ def Agonist_Pulse(glutamate_scale = 1,steady=False):
             AgPulse[i] = AgPulse[i]/1.8393972058572117 #Now we have 1.0 mM
             if AgPulse[i] < .001:
                 AgPulse[i] = 0
+        if second_pulse:
+            AgPulse[100:1090] = AgPulse[10:1000]
     return AgPulse
 
 
@@ -215,6 +217,8 @@ def pick_number_channels(method="uniform", sd=0, mean=0, mog_params=None):
 def pick_glutamate_scale(glutamate_params, method="normal", mog_params=None): #scale in mM
     mean = glutamate_params["gl_mean"]
     sd = glutamate_params["gl_sd"]
+    method = glutamate_params["distribution_type"][0]
+    continuous = glutamate_params['continuous'][0] if 'continuous' in glutamate_params.columns else None
     lower_limit = 1
     upper_limit = 10
 
@@ -222,10 +226,20 @@ def pick_glutamate_scale(glutamate_params, method="normal", mog_params=None): #s
         glutamate_scale = np.random.uniform(glutamate_params["lower_limit"], glutamate_params["upper_limit"])
 
     elif method == "normal":
-        glutamate_scale = int(np.clip(np.random.normal(mean, sd), lower_limit, upper_limit))
+
+
+        if continuous:
+            glutamate_scale = np.clip(np.random.normal(mean, sd), lower_limit, upper_limit)
+
+        else:
+            glutamate_scale = int(np.clip(np.random.normal(mean, sd), lower_limit, upper_limit))
 
     elif method == "lognormal":
-        glutamate_scale = int(np.clip(np.random.lognormal(mean, sd), lower_limit, upper_limit))
+        if continuous:
+            glutamate_scale = np.random.lognormal(mean, sd)
+
+        else:
+            glutamate_scale = int(np.clip(np.random.lognormal(mean, sd), lower_limit, upper_limit))
 
     elif method == "mog":  # Mixture of Gaussians
         if mog_params is None:
@@ -247,7 +261,7 @@ def pick_glutamate_scale(glutamate_params, method="normal", mog_params=None): #s
 
 
 
-def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],current_params = [],output_file_path=None,folder_path = None,agonist_steady=False):
+def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],current_params = [],output_file_path=None,folder_path = None,agonist_steady=False,double_agonist=False):
     channel_distribution = channel_params["distribution_type"][0]
     glut_distribution = glutamate_params["distribution_type"][0]
     channel_sd = channel_params["channel_sd"][0]
@@ -256,7 +270,10 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
     lotbl = -3000 * np.log(np.arange(1, 10001) * 0.0001)
     count = 1
     iCI = .56
-    iCP = iCI * current_params["iCP_Multiplier"][0]
+    if len(current_params) != 0:
+        iCP = iCI * current_params["iCP_Multiplier"][0]
+    else:
+        iCP = 0
     # iSC = .56 #Calculated using the known conductance and holding potential of -70mV
     all_EPSCs = []
     all_total_channel_nums = []
@@ -274,7 +291,7 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
             else:
                 glutamate_scale = pick_glutamate_scale(glutamate_params)
             glutamate_tracker.append(glutamate_scale)
-            AgPulse = Agonist_Pulse(glutamate_scale,steady=agonist_steady)
+            AgPulse = Agonist_Pulse(glutamate_scale,steady=agonist_steady,second_pulse=double_agonist)
             indx = 1
             # AgScale = random.uniform(1, 2)
             # AgPulseScaled = AgScale * AgPulse
@@ -287,7 +304,10 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
             time = np.linspace(0, 16, 800)
             while indx < num_channels: #marking  number of channels
                 # print(channel_params.columns)
-                num_CP = int(num_channels * current_params["CP_Ratio"][0])
+                if len(current_params) > 0:
+                    num_CP = int(num_channels * current_params["CP_Ratio"][0])
+                else:
+                    num_CP = 0
                 # print(f"We have {num_channels} channels and {num_CP} are CP")
                 if indx < num_CP:
                     iSC = iCP
@@ -337,11 +357,13 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
 
             plt.plot(time,single_EPSC)
             all_EPSCs.append(single_EPSC)
+    time = np.linspace(0, 16, 2000)
+    # plt.plot(time,AgPulse/10)
+    # plt.show()
     plt.xlabel("Time (ms)")
     plt.ylabel("Current (pA)")
-    if folder_path == None:
-        folder_path = "C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/"
     plt.savefig(f"{channel_distribution}_channels_{glut_distribution}_glut_rawEPSCs.png")
+
     EPSCs_df = pd.DataFrame(all_EPSCs)
 
     channel_data_df = pd.DataFrame({
@@ -351,7 +373,7 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
     })
     if output_file_path == None:
         print("No file path specified. Using the last known...")
-        output_file_path = f'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/CP_CI_Ratio_Investigation/EPSCs_CP_Ratio-0-Multiplier-3.xlsx'
+        output_file_path = f'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/EPSCs_unspecified.xlsx'
     with pd.ExcelWriter(output_file_path,engine='xlsxwriter') as writer:
         EPSCs_df.T.to_excel(writer, sheet_name="EPSCs", index=False, header=False)
         channel_data_df.to_excel(writer, sheet_name="Channel Data", index=False)

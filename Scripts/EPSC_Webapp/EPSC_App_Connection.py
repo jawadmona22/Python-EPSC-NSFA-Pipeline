@@ -3,6 +3,7 @@ from scipy.optimize import curve_fit
 from sklearn.model_selection import KFold
 import numpy as np
 import Scripts.NSFA_Tools.EPSC_Graphic_Utilities as egg
+import matplotlib.pyplot as plt
 #Initialize some values
 num_decay_segments = 20
 
@@ -132,6 +133,7 @@ def var_calculation(analysis_start_point, residuals_array, segment_indices, pool
             else:
                 variance = sum_block / (n - 1)
                 variances.append(variance)
+
     if analysis_type == 4:
         print("Analysis Type: Individual Traces (Pooling) Chosen")
         variances = np.zeros((len(segment_indices) - 1, num_traces))
@@ -200,8 +202,8 @@ def create_pool_indices(EPSCs, peak_index,num_pools=1): #For creating pools for 
     bin_cutoffs = np.linspace(maxi, mini, num_pools + 1)
 
     bin_cutoffs = np.flip(bin_cutoffs)  # Order it from smallest to largest
-    print("The pool cutoffs are: ", bin_cutoffs)  # Confirmed the same as with excel doc
-    print(raw_sorted.shape)
+    # print("The pool cutoffs are: ", bin_cutoffs)  # Confirmed the same as with excel doc
+    # print(raw_sorted.shape)
     bins = []
     pool_indices = []
     for cutpoint in bin_cutoffs:
@@ -242,7 +244,8 @@ def create_risetime_pool_indices(EPSCs,num_pools=1): #For creating pools for ris
 def objective(scale_factor, raw, average):
     max_raw = np.max(raw)
     max_average = np.max(average)
-    term1 = (raw - average * scale_factor * (max_raw / max_average)) ** 2
+    term1 = (raw - average * scale_factor * (max_raw / max_average)) ** 2 ##Same equation for MSE as used in Jim's excel
+
     return np.sum(term1)
 
 
@@ -279,7 +282,7 @@ def create_residual_array_template_scaled_to_individual(individual,template,peak
     error = ((template * scale_factor) - individual)**2
     return error
 
-def create_residuals(num_traces,EPSCs_sorted,template, error_minimize=True, peak_to_peak =False): #If peak-to-peak is true then we scale the template peak to the individual peak, not to the individual at the time of template peak
+def create_residuals(num_traces,EPSCs_sorted,template, error_minimize=True, peak_to_peak =False,debug=False): #If peak-to-peak is true then we scale the template peak to the individual peak, not to the individual at the time of template peak
     optimized_scale_factors = []
     sum_residuals = []
     for i in range(num_traces):
@@ -299,6 +302,36 @@ def create_residuals(num_traces,EPSCs_sorted,template, error_minimize=True, peak
         if error_minimize:
             current_scale = optimized_scale_factors[i]
             residuals_array[:, i] = create_minimize_error_residuals(current_scale, EPSCs_sorted[:, i], template)
+            ##Example for debug
+            if debug:
+                if i == 1:
+                    total_time = np.shape(EPSCs_sorted)[0] * .02
+                    num_samples = np.shape(EPSCs_sorted)[0]
+                    print(f"Time: {total_time} and samples: {num_samples}")
+                    time = np.linspace(0,total_time,num_samples)
+                    pre_MSE = np.sum((EPSCs_sorted[:, i] - template * (np.max(EPSCs_sorted[:, i]) / np.max(template))) ** 2)
+                    post_MSE = np.sum((EPSCs_sorted[:, i] - template * current_scale * (np.max(EPSCs_sorted[:, i]) / np.max(template))) ** 2)
+
+                    fig, axs = plt.subplots(1, 2)
+                    axs[0].plot(time,EPSCs_sorted[:, i], color = 'red', label=f'Example EPSC')
+                    axs[0].plot(time,template, color='blue',linestyle = '--', label=f'Template')
+                    axs[0].text(400, 100, f'Pre-scaling MSE: {pre_MSE}', horizontalalignment='center', verticalalignment='center')
+                    axs[1].text(400, 100, f'Post-Scaling MSE: {post_MSE}', horizontalalignment='center', verticalalignment='center')
+                    axs[0].set_xlabel('Time (ms)', fontsize=13)
+                    axs[0].set_ylabel('Current (pA)', fontsize=13)
+                    axs[0].set_title('Before Scaling')
+                    axs[1].plot(time,EPSCs_sorted[:, i], color='red', label=f'Example EPSC')
+                    axs[1].plot(time,template * current_scale * (np.max(EPSCs_sorted[:, i]) / np.max(template)), color='blue', linestyle='--', label=f'Template')
+                    axs[1].set_xlabel('Time (ms)', fontsize=13)
+                    axs[1].set_ylabel('Current (pA)', fontsize=13)
+                    axs[1].set_title('After Scaling')
+                    axs[0].set_ylim([0,250])
+                    axs[1].set_ylim([0,250])
+                    plt.legend()
+
+                    plt.savefig(f'Scaling_Validation.png')
+                    plt.show()
+
         else:
             residuals_array[:, i] = create_residual_array_template_scaled_to_individual(EPSCs_sorted[:, i], template,peak_to_peak)
     return residuals_array
@@ -354,12 +387,12 @@ def create_segment_indices(template,start_option):
 
 
 def fitting_parabola(means,variances,force_linear=False):
-    print(f"Means: {means}")
+    # print(f"Means: {means}")
     coefficients_2 = np.polyfit(means, variances, 2)
     coefficients_2[2] = 0 #Force zero intercept
     #Force linear if not concave
     if coefficients_2[0] > 0 or force_linear==True:
-        coefficients_2 = np.polyfit(np.sort(means)[0:5],np.sort(variances)[0:5],1)
+        coefficients_2 = np.polyfit(np.sort(means)[0:2],np.sort(variances)[0:2],1)
         coefficients_2[1] = 0
     fit_parabola = np.poly1d(coefficients_2)
     roots = np.roots(coefficients_2)

@@ -11,28 +11,43 @@ import seaborn as sns
 # Define the decaying exponential function
 def exp_decay(t, A, tau, C):
     return A * np.exp(-t / tau) + C
-def tau_graph_generator(data, folder_name, plt_show=False):
+def tau_graph_generator(data,folder_name, plt_show=False,debug=False,time=6): #Time in ms
     taus = []
+    print(f"Using time {time} ms")
     for col in data.columns:
-        t = np.linspace(0, 16, data.shape[0])
+        t = np.linspace(0, time, data.shape[0])
         y = data[col].values
 
         # Find the index of the peak
         peak_index = np.argmax(y)
-
+        # print(f"Time of Peak: {peak_index}")
         # Use only the values after the peak for curve fitting
-        t_post_peak = t[peak_index:]
-        y_post_peak = y[peak_index:]
+        t_post_peak = t[peak_index+2:]
+        y_post_peak = y[peak_index+2:]
 
         try:
             popt, _ = curve_fit(exp_decay, t_post_peak, y_post_peak, p0=(1, 1, 1))  # Initial guesses for A, tau, C
             A_fit, tau_fit, C_fit = popt
+            # print(tau_fit)
+            if debug:
+                #Check function fit
+                plt.figure(figsize=(8,6))
+                plt.scatter(t_post_peak,y_post_peak) #Plot the data
+                x_fit = np.linspace(min(t_post_peak),max(t_post_peak),100)
+                y_fit  = exp_decay(x_fit,A_fit,tau_fit,C_fit)
+                plt.xlabel("Time (ms)")
+                plt.ylabel("Current (pA)")
+                plt.plot(x_fit,y_fit,label=f"Fitted Curve for tau: {tau_fit}")
+                plt.show()
+
             if tau_fit < 0:
                 taus.append(0)
             else:
                 taus.append(tau_fit)
         except RuntimeError:
             taus.append(0)  # Append 0 if the fit fails
+
+
 
     if plt_show:
         plt.figure()
@@ -67,15 +82,44 @@ def rise_times_histogram_creator(df,folder_name,plt_show = False):
     for col in df.columns:
         trace = df[col].abs()
         max_amp = trace.max()
-        threshold_10 = .1 * max_amp
-        threshold_90 = .9 * max_amp
-        time_10 = trace[trace >=threshold_10].index.min()
-        time_90 = trace[trace >= threshold_90].index.min()
-        if time_90 != None and time_10 != None:
-            rise_time = time_90 - time_10
-            rise_times.append(rise_time*.02) #Conversion to seconds
-        else:
-            print("Invalid trace, rise_time is none")
+        threshold_10 = 0.1 * max_amp
+        threshold_90 = 0.9 * max_amp
+
+        # Find where the signal first crosses the 10% threshold
+        above_10 = trace >= threshold_10
+        above_90 = trace >= threshold_90
+
+        try:
+            idx_10 = above_10.idxmax()  # First index where >= threshold_10
+            idx_90 = above_90.idxmax()
+
+            if idx_10 == 0:
+                print(f"IDX_10: {idx_10} IDX90: {idx_90}")
+                time = idx_90 *.02
+                rise_times.append(time)
+                continue  # Can't interpolate at the start of trace
+
+            # Interpolate time_10
+            prev_idx_10 = idx_10 - 1
+            x0, y0 = prev_idx_10, trace[prev_idx_10]
+            x1, y1 = idx_10, trace[idx_10]
+            time_10_interp = x0 + (threshold_10 - y0) / (y1 - y0)
+
+            # Interpolate time_90
+            prev_idx_90 = idx_90 - 1
+            x0, y0 = prev_idx_90, trace[prev_idx_90]
+            x1, y1 = idx_90, trace[idx_90]
+            time_90_interp = x0 + (threshold_90 - y0) / (y1 - y0)
+
+            # Convert to seconds (assuming 0.02 ms per sample)
+            rise_time = (time_90_interp - time_10_interp) * 0.02
+            rise_times.append(rise_time)
+
+        except Exception as e:
+            print(f"Interpolation failed for column {col}: {e}")
+
+    print(f"Rise Time shape: {len(rise_times)}")
+    print(f"Trace shape: {df.shape}")
 
     rise_times_df = pd.DataFrame({
         'Trace':df.columns,
@@ -119,7 +163,7 @@ def cdf_generator(data,folder_name,plt_show=False):
 
 
 
-def generate_meanECDF_data(file_name,folder_name, use_mean=True,use_median=False,plt_show=False):  #This file should be a .xlsx spreadsheet with tabs labeled with the names of the cells
+def generate_meanECDF_data(file_name,folder_name, use_mean=True,use_median=False,plt_show=False,time=6):  #This file should be a .xlsx spreadsheet with tabs labeled with the names of the cells
     if use_median:
         print("Using median")
     """Generate a dataset that follows the given CDF."""
@@ -142,7 +186,7 @@ def generate_meanECDF_data(file_name,folder_name, use_mean=True,use_median=False
 
         max_amplitudes = amplitude_histogram_creator(EPSCs, folder_name, False)
         rise_times = rise_times_histogram_creator(EPSCs, folder_name, False)
-        taus_array = tau_graph_generator(EPSCs, folder_name, False)
+        taus_array = tau_graph_generator(EPSCs, folder_name, False,time=time)
 
         exp_rise_times.append(rise_times)
         exp_amplitudes.append(max_amplitudes)

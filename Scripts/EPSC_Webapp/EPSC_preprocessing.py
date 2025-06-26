@@ -69,11 +69,11 @@ def align_peaks(unprocessed_EPSCs):
 
     return processed_EPSCs, target_idx
 
-def align_dv_dt(unprocessed_EPSCs):
+def align_dv_dt(unprocessed_EPSCs,debug=False):
     # Create a copy to avoid modifying the original data
     processed_EPSCs = np.zeros_like(unprocessed_EPSCs)
     alignment_point = 15
-
+    time = np.linspace(0,processed_EPSCs.shape[0] * .02,processed_EPSCs.shape[0])
     for col_idx, col in enumerate(unprocessed_EPSCs.T):
         # Find highest dv/dt for template
         peak_value = np.max(col)
@@ -87,15 +87,24 @@ def align_dv_dt(unprocessed_EPSCs):
 
         # Find the first index where the trace crosses the upper threshold after the peak
         upper_index = np.where(col >= upper_threshold)[0][0]
-        #
-        # plt.plot(col)
-        # plt.axvline(x=lower_index, color='r')
-        # plt.axvline(x=upper_index, color='b')
-        # plt.show()
+
         ninety_ten_region = col[lower_index:upper_index]
 
-        biggest_difference_index = np.argmax(np.diff(ninety_ten_region)) + lower_index
-
+        biggest_difference_index = np.argmax(np.diff(ninety_ten_region)) + lower_index #Relative to 0 (full EPSC)
+        #
+        if debug:
+            biggest_difference_index_time = biggest_difference_index * .02
+            print(f"Max DV/DT Point: {biggest_difference_index}")
+            plt.figure()
+            plt.plot(time,col) #Plot the EPSC
+            plt.xlabel("Time (ms)")
+            plt.ylabel("Current (pA)")
+            plt.axvline(x=lower_index*.02, color='r',label="10%",linestyle="--",linewidth=1)
+            plt.axvline(x=upper_index*.02, color='g',label="90%",linestyle="--",linewidth=1)
+            plt.annotate("", xytext=(biggest_difference_index_time, ninety_ten_region[int(biggest_difference_index_time-(lower_index*.02))]), xy=((biggest_difference_index_time+.02, ninety_ten_region[int(biggest_difference_index_time-(lower_index*.02))+1])),
+                        arrowprops=dict(arrowstyle="->"))
+            plt.legend()
+            plt.show()
         # Calculate the shift required to align the peak
         shift = alignment_point - biggest_difference_index
         # Apply np.roll() for shifting
