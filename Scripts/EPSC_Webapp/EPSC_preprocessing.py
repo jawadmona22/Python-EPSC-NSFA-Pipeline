@@ -42,7 +42,7 @@ def align_peaks(unprocessed_EPSCs):
 
         shift = target_idx - max_index  # Compute shift amount
 
-        print(f"\nColumn {col_idx}: Original peak index = {max_index}, Shift required = {shift}")
+        # print(f"\nColumn {col_idx}: Original peak index = {max_index}, Shift required = {shift}")
 
         # Apply np.roll() for shifting
         shifted_col = np.roll(col, shift)
@@ -54,18 +54,18 @@ def align_peaks(unprocessed_EPSCs):
             shifted_col[:shift] = 0  # Zero out introduced values
 
         # Debugging print: Before & after shift
-        # print(f"Original col: {col[:20]}")  # Print first 20 values
-        # print(f"Shifted col: {shifted_col[:20]}")  # Print first 20 values
+        print(f"Original col: {col[:20]}")  # Print first 20 values
+        print(f"Shifted col: {shifted_col[:20]}")  # Print first 20 values
 
         # Ensure assignment works correctly
         processed_EPSCs[:, col_idx] = shifted_col.copy()
 
         # Check if alignment is correct
-        # new_peak_idx = np.argmax(processed_EPSCs[:, col_idx])
-        # if new_peak_idx != target_idx:
-        #     print(f"❌ Warning: Peak in col {col_idx} expected at {target_idx}, but found at {new_peak_idx}")
-        # else:
-        #     print(f"✅ Success: Peak in col {col_idx} correctly aligned at {target_idx}")
+        new_peak_idx = np.argmax(processed_EPSCs[:, col_idx])
+        if new_peak_idx != target_idx:
+            print(f"❌ Warning: Peak in col {col_idx} expected at {target_idx}, but found at {new_peak_idx}")
+        else:
+            print(f"✅ Success: Peak in col {col_idx} correctly aligned at {target_idx}")
 
     return processed_EPSCs, target_idx
 
@@ -94,17 +94,17 @@ def align_dv_dt(unprocessed_EPSCs,debug=False):
         #
         if debug:
             biggest_difference_index_time = biggest_difference_index * .02
-            print(f"Max DV/DT Point: {biggest_difference_index}")
-            plt.figure()
-            plt.plot(time,col) #Plot the EPSC
-            plt.xlabel("Time (ms)")
-            plt.ylabel("Current (pA)")
-            plt.axvline(x=lower_index*.02, color='r',label="10%",linestyle="--",linewidth=1)
-            plt.axvline(x=upper_index*.02, color='g',label="90%",linestyle="--",linewidth=1)
-            plt.annotate("", xytext=(biggest_difference_index_time, ninety_ten_region[int(biggest_difference_index_time-(lower_index*.02))]), xy=((biggest_difference_index_time+.02, ninety_ten_region[int(biggest_difference_index_time-(lower_index*.02))+1])),
-                        arrowprops=dict(arrowstyle="->"))
-            plt.legend()
-            plt.show()
+            # print(f"Max DV/DT Point: {biggest_difference_index}")
+            # plt.figure()
+            # plt.plot(time,col) #Plot the EPSC
+            # plt.xlabel("Time (ms)")
+            # plt.ylabel("Current (pA)")
+            # plt.axvline(x=lower_index*.02, color='r',label="10%",linestyle="--",linewidth=1)
+            # plt.axvline(x=upper_index*.02, color='g',label="90%",linestyle="--",linewidth=1)
+            # plt.annotate("", xytext=(biggest_difference_index_time, ninety_ten_region[int(biggest_difference_index_time-(lower_index*.02))]), xy=((biggest_difference_index_time+.02, ninety_ten_region[int(biggest_difference_index_time-(lower_index*.02))+1])),
+            #             arrowprops=dict(arrowstyle="->"))
+            # plt.legend()
+            # plt.show()
         # Calculate the shift required to align the peak
         shift = alignment_point - biggest_difference_index
         # Apply np.roll() for shifting

@@ -75,6 +75,10 @@ def var_calculation(analysis_start_point, residuals_array, segment_indices, pool
         decay_data = residuals_array[decay_begin:endPoint, :]  # total decay data
 
     variances = []
+    # plt.close('all')
+    # mean_decay_data = np.mean(decay_data,axis=0)
+    # plt.plot(mean_decay_data)
+    # plt.show()
 
     if analysis_type == 0:
         print("Analysis Type 0 Chosen")
@@ -131,7 +135,7 @@ def var_calculation(analysis_start_point, residuals_array, segment_indices, pool
                 print("N=1 detected")
                 variances.append(0)
             else:
-                variance = sum_block / (n - 1)
+                variance = sum_block / (n - 1)  #Sum of our RESIDUALS ARRAY/(n-1)
                 variances.append(variance)
 
     if analysis_type == 4:
@@ -160,6 +164,9 @@ def create_template(data, time_duration,num_samples):
     EPSCs = data[:, :]  # Shape is (sample_size,number_traces)
     # Find the average EPSC from this
     template = np.mean(EPSCs, axis=1)
+    plt.plot(timepoints,template,color='black')
+    plt.plot(timepoints,EPSCs)
+    plt.title("EPSC Template debugging")
     return timepoints, template
 
 
@@ -263,6 +270,7 @@ def peak_scaling(template, raw_trace):
 def scale_peak_to_individual(template,raw_trace,peak_to_peak=False):
     template_peak_index = np.argmax(template)
     template_peak_value = np.max(template)
+
     if peak_to_peak:
         trace_peak = np.max(raw_trace)
         scale_factor = trace_peak/template_peak_value
@@ -343,42 +351,36 @@ def create_segment_indices(template,start_option):
     print("The start index of the analysis is: ", start_option)
     print("The peak index of the analysis is", peak_index)
     endPoint = template.shape[0] - 1
-    template_decay_range = template[15:endPoint]
+    template_decay_range = template[peak_index:endPoint]
 
-    decay_interval_width = (np.max(template_decay_range) - np.min(template_decay_range)) / num_decay_segments
     peak = np.max(template_decay_range)
+    minimum = np.min(template_decay_range)
+    thresholds = np.linspace(peak, minimum, num_decay_segments + 1).tolist()
+
+    # for i in range (0,20):
+    #     temp_thresh -= decay_interval_width
+    #     if temp_thresh < 0:
+    #         temp_thresh = 0
+    #     thresholds.append(temp_thresh)
 
 
-    # if start_option == "peak_start":
-    #     print("Peak Starting!")
-    #     a = peak
-    #     cutoffs = []
-    #     for i in range(num_decay_segments):
-    #         a = a - decay_interval_width
-    #         cutoffs.append(a)
-    #     segment_indices = []
-    #     segment_indices.append(0)
-    #
-    #     for cutpoint in cutoffs:
-    #         index = 0
-    #         for value in template_decay_range:
-    #             if value <= cutpoint:
-    #                 segment_indices.append(index - 1)
-    #                 break
-    #             index += 1
-    #     segment_indices.append(endPoint)
-    # else:
-    segment_indices = [0]
-    #Find the absolute change equal to the decay segment width
+    segment_indices = []
     iter_segment_index = 0
-    for i in range(1,len(template_decay_range)):
-        current_value = template_decay_range[iter_segment_index]
-        if template_decay_range[i] >= (current_value + decay_interval_width) or template_decay_range[i] <= current_value - decay_interval_width:
-            segment_indices.append(i)
-            iter_segment_index = i
+    for i in range(0,len(template_decay_range)):
 
-        if len(segment_indices) == 20:
+        if template_decay_range[i] <= thresholds[iter_segment_index]:
+
+            segment_indices.append(i)
+            iter_segment_index+=1
+
+
+
+
+        if len(segment_indices) == 21:
             break
+
+
+
 
 
 

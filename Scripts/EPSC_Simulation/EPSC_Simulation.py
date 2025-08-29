@@ -165,8 +165,8 @@ def Open(npl,lotbl):
     if npl > 800:
         return npl, "End"
     tpoint = .00002
-    kOC2 = 8000 * tpoint
-    kOC5 = 242 * tpoint
+    kOC2 = 12000 * tpoint #8000 * tpoint
+    kOC5 = 363 * tpoint #242 * tpoint
     dO5 = (1 / (3000 * kOC5)) * lotbl[int(10000*random.uniform(0,1))]
     dO2 = (1 / (3000 * kOC2)) * lotbl[int(10000*random.uniform(0,1))]
 

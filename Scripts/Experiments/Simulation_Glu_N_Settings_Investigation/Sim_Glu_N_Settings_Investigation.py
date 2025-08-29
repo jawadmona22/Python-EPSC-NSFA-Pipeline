@@ -21,15 +21,15 @@ graphs and the extraction of (i) and (n) for simulated EPSC data. """
 
 def create_fixed_simulation():
 
-    fixed_folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\fixed_EPSCs.xlsx"
+    fixed_folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\fixed_EPSCs_gl1_ch200.xlsx"
     fixed_glutamate_params = pd.DataFrame(
-        [{"gl_mean": 0, "gl_sd": 0, "distribution_type": "fixed_value", "fixed_value": 3.5}])
+        [{"gl_mean": 0, "gl_sd": 0, "distribution_type": "fixed_value", "fixed_value": 1}])
 
     fixed_channel_params = pd.DataFrame(
-        [{"distribution_type": "fixed_value", "channel_sd": 0, "channel_mean": 0, "fixed_value": 1000}])
+        [{"distribution_type": "fixed_value", "channel_sd": 0, "channel_mean": 0, "fixed_value": 200}])
 
 
-    EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=1000,channel_params=fixed_channel_params,glutamate_params=fixed_glutamate_params, output_file_path=fixed_folder_path)
+    EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=200,channel_params=fixed_channel_params,glutamate_params=fixed_glutamate_params, output_file_path=fixed_folder_path)
 
 def create_normn_fixedglu_simulation():
 
@@ -626,11 +626,259 @@ def RiseTime_Amplitude_Clustering_IEM(): #Compare RT/Amplitude for Control/IEM
 
 
 
+def NSFA_continous_optimized():
+
+    ##Create a combined matrix
+    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\EPSC_Data\\EPSCS_3XSim_100_CDFfit.xlsx"
+    epscs = pd.read_excel(folder_path)
+    params = {
+        "alignment": ["peak"],
+        "direct_df_input": True,
+        "analysis_start_point": ["peak_start"],
+        "scaling": ["minimize_error"],
+        "output": ["linear", "parabolic"],
+        "file_name": 'cont-opt-epscs.xlsx',
+        "folder_name": "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation",
+        "sheet_names": [0],
+        "EPSCs":epscs
+    }
+
+
+    matrix = matrix_generator(params, first_sheet=True)
+    matrix_df = pd.DataFrame(matrix)
+    matrix_df.to_excel('cont-opt-matrix.xlsx')
+
+
+def NSFA_continous_optimized_all_matrix_options():
+
+    ##Create a combined matrix
+    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\EPSC_Data\\EPSCS_3XSim_100_CDFfit.xlsx"
+    epscs = pd.read_excel(folder_path)
+    channel_data = pd.read_excel(folder_path, sheet_name="Channel Data")
+    mean_channels = channel_data["Open Channels"].mean()
+    params = {
+        "alignment":["peak","midpoint","max_dv_dt"],
+        "direct_df_input": True,
+        "analysis_start_point":["peak_start"],
+        "scaling":["minimize_error","peak_scaling_at_peak_time","peak_to_peak_scaling"],
+        "output": ["linear","parabolic"],
+        "file_name": 'cont-opt-epscs.xlsx',
+        "folder_name": "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\NSFA_Output_Opt",
+        "sheet_names": [0],
+        "EPSCs":epscs,
+        "mean_channels": mean_channels,
+        "recording_duration":16
+    }
+
+
+    matrix = matrix_generator(params, first_sheet=True,debug=True)
+    matrix_df = pd.DataFrame(matrix)
+    matrix_df.to_excel('cont-opt-matrix-many.xlsx')
+
+def NSFA_control_all_options():
+
+    ##Create a combined matrix
+    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\fixed_EPSCs_gl1_ch200.xlsx"
+    epscs = pd.read_excel(folder_path,sheet_name=0)
+    channel_data = pd.read_excel(folder_path, sheet_name="Channel Data")
+    mean_channels = channel_data["Open Channels"].mean()
+    params = {
+        "alignment":["peak","midpoint","max_dv_dt"],
+        "direct_df_input": True,
+        "analysis_start_point":["peak_start",],
+        "scaling":["minimize_error","peak_scaling_at_peak_time","peak_to_peak_scaling"],
+        "output": ["linear","parabolic"],
+        "file_name": 'fixed_EPSCs_gl1_ch200.xlsx',
+        "folder_name": "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\NSFA_Output_Control",
+        "sheet_names": ["Control"],
+        "EPSCs":epscs,
+        "mean_channels":mean_channels,
+        "recording_duration":16
+    }
+
+
+    matrix = matrix_generator(params, first_sheet=True)
+    matrix_df = pd.DataFrame(matrix)
+    matrix_df.to_excel('control-matrix-gl1_ch200.xlsx')
+
+def Amplitude_Decay_Simulation_Analysis():
+
+        print("Beginning decay/amplitude analysis")
+        folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\EPSC_Data"
+
+        for file in os.listdir(folder_path):
+            if file.endswith(".xlsx"):
+                file_path = os.path.join(folder_path, file)
+                print(f"Creating histogram for file {file_path}")
+                simulation_EPSCs = pd.read_excel(file_path, sheet_name=0)
+                channel_data = pd.read_excel(file_path, sheet_name="Channel Data")
+                open_channels = channel_data['Open Channels']
+                simulation_decay_taus = egg.tau_graph_generator(simulation_EPSCs, folder_name=folder_path,
+                                                                         plt_show=False,time=16)
+                simulation_amplitudes = egg.amplitude_histogram_creator(simulation_EPSCs, folder_name=folder_path,
+                                                                        plt_show=False)
+                plt.close('all')
+                print(len(simulation_amplitudes))
+                print(len(simulation_decay_taus))
+                print(open_channels.shape)
+
+                df = pd.DataFrame({'DecayTaus': simulation_decay_taus, 'Amplitudes': simulation_amplitudes,
+                                   'open_channels': open_channels.values})
+
+                fallback_cmap = cm.get_cmap('viridis')
+                df['open_channels'] = df['open_channels'].apply(
+                    lambda x: float(ast.literal_eval(x)[0]) if isinstance(x, str) else float(x))
+
+                norm = mcolors.Normalize(vmin=100, vmax=1500)
+
+                sc = None
+
+                for label, group in df.groupby('open_channels'):
+                    # Use continuous colormap
+                    sc = plt.scatter(group['DecayTaus'], group['Amplitudes'],
+                                     c=[label] * len(group), cmap=fallback_cmap, norm=norm,
+                                     label=f'{label}')
+
+                # Add colorbar if any point used the continuous colormap
+                if sc is not None:
+                    cbar = plt.colorbar(sc)
+                    cbar.set_label("Open Channels")
+                # Add common plot elements
+                plt.title(f"Decay Taus vs. Amplitude for {file[:-4]}")
+                plt.xlabel("Decay Taus")
+                plt.ylabel("Max Amplitudes (pA)")
+                # plt.xlim(0, 0.4)
+                # plt.ylim(0, 1000)
+
+                # Save or show the completed plot
+                plt.savefig(f"{file[:-4]}-n-decay.png")
+                plt.show()
+
+def Amplitude_Decay_Simulation_Colored_Glu():
+    print("Beginning decay tau/amplitude analysis")
+    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\EPSC_Data"
+    cmap = cm.get_cmap('tab20', 20)  # 40 samples for smooth interpolation
+    label_colors = {i: cmap(i / 19) for i in np.arange(0, 10, 0.5)}
+
+    for file in os.listdir(folder_path):
+        if file.endswith(".xlsx"):
+            file_path = os.path.join(folder_path, file)
+            print(f"Creating histogram for file {file_path}")
+            simulation_EPSCs = pd.read_excel(file_path,sheet_name=0)
+            channel_data = pd.read_excel(file_path,sheet_name="Channel Data")
+            glut_data = channel_data['Glutamate Concentration']
+            simulation_decay_taus = egg.tau_graph_generator(simulation_EPSCs, folder_name=folder_path,
+                                                            plt_show=False,time=16)
+            simulation_amplitudes = egg.amplitude_histogram_creator(simulation_EPSCs, folder_name=folder_path,
+                                                                    plt_show=False)
+            plt.close('all')
+            print(len(simulation_amplitudes))
+            print(len(simulation_decay_taus))
+            print(glut_data.shape)
+
+            df = pd.DataFrame({'DecayTaus':simulation_decay_taus,'Amplitudes':simulation_amplitudes,'Glu':channel_data['Glutamate Concentration'].values})
+
+            fallback_cmap = cm.get_cmap('Blues')
+            df['Glu'] = df['Glu'].apply(lambda x: float(ast.literal_eval(x)[0]) if isinstance(x, str) else float(x))
+
+            norm = mcolors.Normalize(vmin=df['Glu'].min(), vmax=df['Glu'].max())
+
+            sc = None
+
+            for label, group in df.groupby('Glu'):
+                if label in label_colors:
+                    color = label_colors[label]
+                    plt.scatter(group['DecayTaus'], group['Amplitudes'], color=color)
+                else:
+                    # Use continuous colormap
+                    sc = plt.scatter(group['DecayTaus'], group['Amplitudes'],
+                                     c=[label] * len(group), cmap=fallback_cmap, norm=norm,
+                                     label=f'{label}')
+
+            # Add colorbar if any point used the continuous colormap
+            if sc is not None:
+                cbar = plt.colorbar(sc)
+                cbar.set_label("Glutamate Concentration (mM)")
+            else:
+                plt.legend(title="Glutamate Concentration (mM)")
+            # Add common plot elements
+            plt.title(f"Decay Tau vs. Amplitude for {file[:-4]}")
+            plt.xlabel("Decay Taus")
+            plt.ylabel("Max Amplitudes (pA)")
+            # plt.xlim(0, 0.4)
+            # plt.ylim(0, 1000)
+
+            # Save or show the completed plot
+            plt.savefig(f"{file[:-4]}-glu-decay.png")
+            plt.show()
+
+def naive_diffusion_sim():
+
+    fixed_folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\Diffusion_Testing\\test_epscs.xlsx"
+    fixed_glutamate_params = pd.DataFrame(
+        [{"gl_mean": 0, "gl_sd": 0, "distribution_type": "diffusion", "fixed_value": None}])
+
+    fixed_channel_params = pd.DataFrame(
+        [{"distribution_type": "fixed_value", "channel_sd": 0, "channel_mean": 0, "fixed_value": 200}])
+
+
+    EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=200,channel_params=fixed_channel_params,glutamate_params=fixed_glutamate_params, output_file_path=fixed_folder_path)
+
+
+def Rise_Times_Amps_Diffusion_Sim():
+    print("Beginning Diffusion Sim rise time/amplitude analysis")
+    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\Diffusion_Testing"
+
+    for file in os.listdir(folder_path):
+        if file.endswith(".xlsx"):
+            file_path = os.path.join(folder_path, file)
+            print(f"Creating histogram for file {file_path}")
+            simulation_EPSCs = pd.read_excel(file_path, sheet_name=0)
+            channel_data = pd.read_excel(file_path, sheet_name="Channel Data")
+            open_channels = channel_data['Open Channels']
+            simulation_rise_times = egg.rise_times_histogram_creator(simulation_EPSCs, folder_name=folder_path,
+                                                                     plt_show=False)
+            simulation_amplitudes = egg.amplitude_histogram_creator(simulation_EPSCs, folder_name=folder_path,
+                                                                    plt_show=False)
+            plt.close('all')
+            print(len(simulation_amplitudes))
+            print(len(simulation_rise_times))
+            print(open_channels.shape)
+
+            df = pd.DataFrame({'RiseTimes': simulation_rise_times, 'Amplitudes': simulation_amplitudes,
+                               'open_channels': open_channels.values})
+
+            fallback_cmap = cm.get_cmap('viridis')
+            df['open_channels'] = df['open_channels'].apply(
+                lambda x: float(ast.literal_eval(x)[0]) if isinstance(x, str) else float(x))
+
+            norm = mcolors.Normalize(vmin=100, vmax=1500)
+
+            sc = None
+
+            for label, group in df.groupby('open_channels'):
+                # Use continuous colormap
+                sc = plt.scatter(group['RiseTimes'], group['Amplitudes'],
+                                 c=[label] * len(group), cmap=fallback_cmap, norm=norm,
+                                 label=f'{label}')
+
+            # Add colorbar if any point used the continuous colormap
+            if sc is not None:
+                cbar = plt.colorbar(sc)
+                cbar.set_label("Open Channels")
+            # Add common plot elements
+            plt.title(f"Rise Times vs. Amplitude for {file[:-4]}")
+            plt.xlabel("Rise Times (ms)")
+            plt.ylabel("Max Amplitudes (pA)")
+            plt.xlim(0, 0.4)
+            plt.ylim(0, 1000)
+
+            # Save or show the completed plot
+            plt.savefig(f"{file[:-4]}-n.png")
+            plt.show()
 
 
 
-
-    plt.show()
 if __name__ == "__main__":
     #create_fixed_simulation()
     #create_normn_fixedglu_simulation()
@@ -661,5 +909,29 @@ if __name__ == "__main__":
 
 
     #Next, we wanted to see what the drug_condition data looks like
-    RiseTime_Amplitude_Clustering_IEM()
+    # RiseTime_Amplitude_Clustering_IEM()
+
+    #A new optimization was done while glutamate was continuous. Running this again..
+    # Rise_Times_Simulation_Colored_Glu()
+    # Rise_Times_Simulation_Colored_N()
+
+    #What does NSFA look like for our new optimization?
+    # NSFA_continous_optimized()
+
+    #If we run NSFA with ALL options on the optimization, what do we get?
+    NSFA_continous_optimized_all_matrix_options()
+
+    #Some very strange looking things. Let's try a control.
+    NSFA_control_all_options()
+
+    #Are we 1000% sure the control is a control
+    create_fixed_simulation()
+
+    #Figured out the issue. Now moving on to Amplitude VS Decay Plots
+    # Amplitude_Decay_Simulation_Analysis()
+
+    # Amplitude_Decay_Simulation_Colored_Glu()
+
+    #Experimentally, let's try some naive models of diffusion.
+
 

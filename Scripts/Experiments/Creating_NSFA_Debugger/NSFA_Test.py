@@ -35,6 +35,7 @@ def test_NSFA_analysis():
     folder_path = 'EPSCs_Test_Files'
 
     params = {
+        "direct_df_input": None,
         "alignment": ["peak"],
         "analysis_start_point": ["peak_start",],
         "scaling": ["minimize_error"],
@@ -61,7 +62,8 @@ def test_alignment_debug():
         "scaling": ["minimize_error"],
         "output": ["linear", "parabolic"],
         "file_name": file_name,
-        "folder_name": folder_path
+        "folder_name": folder_path,
+        "recording_duration":16
 
     }
 
@@ -69,6 +71,10 @@ def test_alignment_debug():
     matrix_df = pd.DataFrame(matrix)
     matrix_df.to_excel('testing_alignment_matrix.xlsx')
 
+
+
+
 if __name__ == '__main__':
+    # test_EPSC_Simulator()
     # test_NSFA_analysis()
     test_alignment_debug()

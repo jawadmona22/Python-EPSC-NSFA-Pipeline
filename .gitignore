@@ -1,2 +1,5 @@
 
 ml testing.py
+*.xls*
+
+*.png*

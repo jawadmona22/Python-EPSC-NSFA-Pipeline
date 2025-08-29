@@ -169,13 +169,14 @@ def optimize_epsc_params(mean_cdf, initial_guess, bounds):
         #     glutamate_params=glutamate_params,
         #     channel_params=channel_params
         # )
-        simulation_EPSCs = pd.read_excel('C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/Simulation_Glu_N_Settings_Investigation/EPSC_Data/normaln_normalglu_c.xlsx',sheet_name=0,index_col=None)
+        simulation_EPSCs = pd.read_excel('C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/Simulation_Glu_N_Settings_Investigation/EPSC_Data/EPSCS_CDFfit_1000_sd1.xlsx',sheet_name=0,index_col=None)
         # simulation_EPSCs = simulation_EPSCs.T #transpose into correct shape (rows = time)
 
         folder_name = 'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/Simulation_Glu_N_Settings_Investigation'
-        simulation_rise_times = egg.rise_times_histogram_creator(simulation_EPSCs,folder_name=folder_name,plt_show=True)
+        simulation_rise_times = egg.rise_times_histogram_creator(simulation_EPSCs,folder_name=folder_name,plt_show=False)
+
         simulation_amplitudes = egg.amplitude_histogram_creator(simulation_EPSCs,folder_name=folder_name,plt_show=False)
-        simulation_taus = egg.tau_graph_generator(simulation_EPSCs,folder_name=folder_name,plt_show=True)
+        simulation_taus = egg.tau_graph_generator(simulation_EPSCs,folder_name=folder_name,plt_show=False)
 
         def empirical_cdf(data):
             """Calculate the empirical CDF from raw data."""
@@ -202,8 +203,10 @@ def optimize_epsc_params(mean_cdf, initial_guess, bounds):
 
             # Step 4: Compute the KS statistic as the maximum absolute difference
             ks_statistic = np.max(np.abs(mean_cdf_interp - sim_cdf_interp))
+            gap_difference = np.argmax(np.abs(mean_cdf_interp - sim_cdf_interp))
+            print(f"Index of largest difference: { gap_difference}")
 
-            return ks_statistic, common_x, mean_cdf_interp, sim_cdf_interp
+            return ks_statistic, common_x, mean_cdf_interp, sim_cdf_interp,gap_difference
 
 
 
@@ -218,11 +221,11 @@ def optimize_epsc_params(mean_cdf, initial_guess, bounds):
         mean_tau_cdf_values = mean_cdf['tau_cdf']
 
         # Step 2: Run the two-sample KS test with raw simulation data and the mean CDF
-        rise_ks_stat, rise_common_x, rise_cdf1_interp, rise_cdf2_interp = two_sample_ks_test(mean_rise_x, mean_rise_cdf_values,
+        rise_ks_stat, rise_common_x, rise_cdf1_interp, rise_cdf2_interp, gap_difference = two_sample_ks_test(mean_rise_x, mean_rise_cdf_values,
                                                                          simulation_rise_times)
-        amp_ks_stat, amp_common_x, amp_cdf1_interp, amp_cdf2_interp = two_sample_ks_test(mean_amp_x, mean_amp_cdf_values,
+        amp_ks_stat, amp_common_x, amp_cdf1_interp, amp_cdf2_interp, _ = two_sample_ks_test(mean_amp_x, mean_amp_cdf_values,
                                                                          simulation_amplitudes)
-        tau_ks_stat, tau_common_x, tau_cdf1_interp, tau_cdf2_interp = two_sample_ks_test(mean_tau_x, mean_tau_cdf_values,
+        tau_ks_stat, tau_common_x, tau_cdf1_interp, tau_cdf2_interp, _ = two_sample_ks_test(mean_tau_x, mean_tau_cdf_values,
                                                                          simulation_taus)
 
         # Print the KS statistic
@@ -248,6 +251,7 @@ def optimize_epsc_params(mean_cdf, initial_guess, bounds):
         plt.figure(figsize=(8, 6))
         plt.plot(rise_common_x, rise_cdf1_interp, label="Mean Rise CDF", color='b')
         plt.plot(rise_common_x, rise_cdf2_interp, label="Simulation Rise CDF", color='r', linestyle='--')
+        plt.vlines(rise_common_x[gap_difference],ymin=0,ymax=1,linestyles='--')
         plt.xlabel('Time (ms)')
         plt.ylabel('CDF')
         plt.title('Comparison of Mean CDF and Simulation CDF - Rise Times')
@@ -324,7 +328,7 @@ if __name__ == "__main__":
     # #Run once to save
     # synth_df = pd.DataFrame(synthetic_samples)
     # mean_cdf_df.to_pickle("mean_cdf_data.pkl")
-    mean_cdf = pd.read_pickle("mean_cdf_data.pkl")
+    mean_cdf = pd.read_pickle("mean_cdf_6_30.pkl")
     bounds = [(100,1000),(500,4000),(.5,10),(1,15)]
     initial_guess = [560,1800,.5,3.5]  # Channel SD, channel Mean, and glutamate SD, glutamate scale Mean
 

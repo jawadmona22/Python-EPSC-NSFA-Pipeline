@@ -94,7 +94,6 @@ def rise_times_histogram_creator(df,folder_name,plt_show = False):
             idx_90 = above_90.idxmax()
 
             if idx_10 == 0:
-                print(f"IDX_10: {idx_10} IDX90: {idx_90}")
                 time = idx_90 *.02
                 rise_times.append(time)
                 continue  # Can't interpolate at the start of trace

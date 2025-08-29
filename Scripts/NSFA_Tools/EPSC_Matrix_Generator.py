@@ -80,9 +80,12 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
             epscs = params["EPSCs"]
         epscs = epscs.to_numpy()
         folder_name = params["folder_name"]
-        time_duration = 16  #ms
+        if params["recording_duration"] == None:
+            time_duration = 16  #ms
+        else:
+            time_duration = params["recording_duration"]
         num_samples = epscs.shape[0]
-        print(f"Shape of EPSCs: {epscs.shape}")
+        # print(f"Shape of EPSCs: {epscs.shape}")
         ##Plotting the raw EPSCs, unchanged
 
         if save_figs:
@@ -164,31 +167,33 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                 #For each analysis start point option
                 for start_option in params["analysis_start_point"]:
                     segment_indices = EPSC_App_Connection.create_segment_indices(template, start_option)
-                    plt.figure()
-                    plt.plot(timepoints,template,color='blue')
-                    plt.title("Segment Validation on Template")
-                    plt.xlabel("Time (ms)")
-                    plt.ylabel("Current (pA)")
-                    for index in segment_indices:
-                        plt.axvline(x=(peak_index + index) * .02, color='red', linestyle='--', linewidth=1)
-                    plt.savefig("Segments_Validation.png")
-                    workflow_report[sheet_name][start_option]= 'Segments_Validation.png'
+
 
                     if debug:
+                        plt.figure()
+                        plt.plot(timepoints, template, color='blue')
+                        plt.title("Segment Validation on Template")
+                        plt.xlabel("Time (ms)")
+                        plt.ylabel("Current (pA)")
+                        for index in segment_indices:
+                            plt.axvline(x=(peak_index + index) * .02, color='red', linestyle='--', linewidth=1)
+                        plt.savefig("Segments_Validation.png")
+                        workflow_report[sheet_name][start_option] = 'Segments_Validation.png'
                         plt.show()
-                    if start_option == "peak_start":
-                        #Run mean variance with that start point
-                        means = EPSC_App_Connection.mean_calculation(raw_sorted, start_index=peak_index, endPoint=endPoint, segment_indices=segment_indices,
-                                                 analysis_type=3)
-                        vars = EPSC_App_Connection.var_calculation(peak_index, residuals_array, segment_indices, pool_indices, endPoint, 3)
+                    # if start_option == "peak_start":
+                    #Run mean variance with that start point
+                    means = EPSC_App_Connection.mean_calculation(raw_sorted, start_index=peak_index, endPoint=endPoint, segment_indices=segment_indices,
+                                             analysis_type=3)
+                    vars = EPSC_App_Connection.var_calculation(peak_index, residuals_array, segment_indices, pool_indices, endPoint, 3)
 
 
-                    elif start_option == "alignment_point":
-                         means = EPSC_App_Connection.mean_calculation(raw_sorted, start_index=start_point, endPoint=endPoint, segment_indices=segment_indices,
-                                                  analysis_type=3)
-                         vars = EPSC_App_Connection.var_calculation(start_point, residuals_array, segment_indices, pool_indices, endPoint, 3)
-
-                        #Run mean variance with that alignment
+                    # elif start_option == "alignment_point":
+                    #
+                    #      means = EPSC_App_Connection.mean_calculation(raw_sorted, start_index=start_point, endPoint=endPoint, segment_indices=segment_indices,
+                    #                               analysis_type=3)
+                    #      vars = EPSC_App_Connection.var_calculation(start_point, residuals_array, segment_indices, pool_indices, endPoint, 3)
+                    #
+                    #     #Run mean variance with that alignment
 
                     #Derive i, n values for linear and parabolic
                     fit_parabola, roots, initial_slope = EPSC_App_Connection.fitting_parabola(means, vars,force_linear=False)
@@ -198,9 +203,23 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                     matrix.append(matrix_entry)
                     if save_figs:
                         fig, axs = plt.subplots(1, 1)
-                        axs.scatter(means, vars, color='black')
+                        axs.scatter(means, vars, color='green')
+                        for idx,item in enumerate(means):
+                            axs.text(means[idx],vars[idx],idx)
                         sorter = np.sort(means)
-                        axs.plot(sorter, fit_parabola(sorter), color='black')
+                        roots = fit_parabola.r
+                        if len(roots) > 1:
+                            x_vals = np.linspace(min(roots) - 1, max(roots) + 1, 500)
+                            axs.plot(x_vals, fit_parabola(x_vals), color='black')
+                        else:
+                            axs.plot(sorter,lin_fit_parabola(sorter),color='red')
+                        if "mean_channels" in params:
+                            #Plot the idealized parabola
+                            N = params["mean_channels"]
+                            ideal_parabola = np.poly1d([-1/N,.56,0])
+                            roots = ideal_parabola.r
+                            x_vals = np.linspace(min(roots) - 1, max(roots) + 1, 500)
+                            axs.plot(x_vals,ideal_parabola(x_vals),color='blue')
                         # axs.plot(sorter[0:5], lin_fit_parabola(sorter)[0:5], color='red')
                         axs.set_title("Variance vs Mean")
                         axs.set_xlabel("Mean Current (pA)")
@@ -208,7 +227,6 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
 
                         plt.savefig(f"{params['folder_name']}/{alignment_type}_{start_option}_{scaling_type}_{sheet_name}.png")
                     print(matrix_entry)
-    print(workflow_report)
     return matrix
 
 
