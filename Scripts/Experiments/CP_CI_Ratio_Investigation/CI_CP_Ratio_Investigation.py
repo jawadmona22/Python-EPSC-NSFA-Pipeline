@@ -955,9 +955,9 @@ def create_combined_figure():
 
 def create_ratio_gradient_variability():
 
-    ci_ratio_list = [.4,.5,.6,.7,.8,.9,1]
+    ci_ratio_list = [0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1]
     glutamate_params = pd.DataFrame(
-        [{"gl_mean": 2.5, "gl_sd": 1, "distribution_type": "normal", "fixed_value": None}])
+        [{"gl_mean": 2.5, "gl_sd": 1, "distribution_type": "normal", "fixed_value": None,"continuous":True}])
 
     channel_params = pd.DataFrame(
         [{"distribution_type": "normal", "channel_sd": 700, "channel_mean": 2200, "fixed_value": None}])
@@ -1046,7 +1046,7 @@ def visualize_nsfa_gradient_var():
     alignment_types = df['alignment'].unique()
 
     sns.set(style="white")  # No grid background
-
+    tables = []
     for scaling in scaling_types:
         for alignment in alignment_types:
             sub_df = df[(df['scaling'] == scaling) & (df['alignment'] == alignment)].copy()
@@ -1100,72 +1100,101 @@ def visualize_nsfa_gradient_var():
 
 
             #######Plotting based on cell fraction equation
-            ici = grouped['mean_linear_i'].iloc[-1]   #Mean of the CI10_CP0 state, should be a single
-            ict_array = sub_df['linear_i'].iloc[0:-5] #All of the other states... individually
+            ici = grouped['mean_linear_i'].iloc[-1]   #Mean of the CI10_CP0 state, should be an integer
+            ict_array = sub_df['linear_i'] #Series
             ict_array = ict_array.reset_index()['linear_i']
-            B = ict_array - (ici/ict_array)# fraction of current "blocked"
+            B = (ict_array - ici)/ict_array# fraction of current "blocked"
+
+
 
 
             icp = ici + ((ict_array - ici)/(B))
-
+            #FCP is not as long as pred_Cp
             fCP = ici/((icp/B)-(icp - ici))
 
 
-            true_cp = sub_df['CP'].iloc[0:-1].reset_index(drop=True)
-            pred_cp = fCP.iloc[0:-1].reset_index(drop=True)
 
-            cp_df = pd.DataFrame({
-                'true_cp': true_cp,
-                'pred_cp': pred_cp
+
+
+
+            true_cp = sub_df['CP']
+            pred_cp = fCP
+            true_cp.reset_index(drop=True, inplace=True)
+            pred_cp.reset_index(drop=True, inplace=True)
+            ###Debugging
+            table =pd.DataFrame({
+                "scaling": scaling,
+                "alignment": alignment,
+                "ici": ici,  # scalar -> repeats for every row
+                "ict_array": ict_array,
+                "B": B,
+                "icp": icp,
+                "pred_cp": fCP,
+                "true_cp": true_cp/10,
+                "error":((true_cp)/10)- fCP
             })
+            tables.append(table)
 
+            # Optional: round values for readability
+            # table = table.round(4)
 
-            # Step 3: Masks based on pred_cp values
-            valid_mask = (cp_df['pred_cp'] <= 80) | (cp_df['pred_cp'] >= -10)
-            invalid_mask = (cp_df['pred_cp'] > 80) | (cp_df['pred_cp'] < -10)
+            # Print as a clean table
+            # print(table.to_string(index=False))
 
             # Step 4: Plot
             plt.close('all')
 
             plt.figure(figsize=(6, 6))
-            cp_df['error'] = cp_df['true_cp'] - cp_df['pred_cp']
-            error = cp_df.loc[valid_mask, 'true_cp']/10 - cp_df.loc[valid_mask, 'pred_cp']/10
-            error_o = cp_df.loc[invalid_mask, 'true_cp']/10 - cp_df.loc[invalid_mask, 'pred_cp']/10
-            # Blue: valid predictions
-            plt.scatter(cp_df.loc[valid_mask, 'true_cp']/10, error/10,
-                        c='blue')
-            plt.scatter(cp_df.loc[invalid_mask, 'true_cp']/10, error_o/10,
-                        c='red')
+
+            error = ((true_cp)/10) - fCP
+
+            plt.scatter(true_cp/10,error)
+
             xmin, xmax = plt.xlim()  # get current limits
             plt.xlim(xmax, xmin)  # reverse them
-            #
-            # # Red X: invalid predictions, show at (true_cp, true_cp)
-            # if cp_df.loc[invalid_mask, 'true_cp'].any():
-            #     x_vals = cp_df.loc[invalid_mask, 'true_cp']
-            #     y_vals = cp_df.loc[invalid_mask, 'true_cp']  # plotted on diagonal
-            #     outlier_vals = cp_df.loc[invalid_mask, 'pred_cp']
-            #
-            #     # Scatter red Xs
-            #     plt.scatter(x_vals/10, y_vals/10, c='red', marker='x', label='Outlier Point Removed')
-            #
-            #     # Annotate each red X with the predicted value
-            #     for x, y, val in zip(x_vals/10, y_vals/10, outlier_vals):
-            #         plt.annotate(f"{val:.1f}", (x, y), textcoords="offset points", xytext=(5, 5), fontsize=9,
-            #                      color='red')
-            #     plt.legend()
 
-            # Labels and formatting
+
             plt.xlabel('True fCP')
             plt.ylabel('Error (True-Pred CP)')
             plt.title(f'Predicted vs True CP\nScaling: {scaling}, Alignment: {alignment}')
-            plt.xlim([0,1.01])
-            # lin_x = np.linspace(0,1,10)
-            # lin_y = np.linspace(0,1,10)
-            # plt.plot(lin_x,lin_y)
+            plt.xlim([-.01,1.01])
+            lin_x = np.linspace(0,1,10)
+            lin_y = np.linspace(0,1,10)
+            plt.plot(lin_x,lin_y)
             plt.grid(True)
             # plt.xlabel("True fCP")
             plt.tight_layout()
+            # plt.show()
             plt.savefig(f'Ratio_Gradient_Plots/true_pred_cp_var/{scaling}-{alignment}-cp-comp.png')
+
+        tables_df = pd.concat(tables)
+        tables_df.to_excel("cp_invest.xlsx")
+        # load the sample data
+        df = pd.DataFrame({'MutProb': [0.1,
+                                       0.05, 0.01, 0.005, 0.001, 0.1, 0.05, 0.01, 0.005, 0.001, 0.1, 0.05, 0.01, 0.005,
+                                       0.001, 0.1, 0.05, 0.01, 0.005, 0.001, 0.1, 0.05, 0.01, 0.005, 0.001],
+                           'SymmetricDivision': [1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.8, 0.8, 0.8, 0.8, 0.6, 0.6, 0.6, 0.6,
+                                                 0.6, 0.4, 0.4, 0.4, 0.4, 0.4, 0.2, 0.2, 0.2, 0.2, 0.2],
+                           'test': ['sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule',
+                                    'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule',
+                                    'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule',
+                                    'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule',
+                                    'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule'],
+                           'value': [-4.1808639999999997, -9.1753490000000006, -11.408113999999999, -10.50245,
+                                     -8.0274750000000008, -0.72260200000000008, -6.9963940000000004,
+                                     -10.536339999999999, -9.5440649999999998, -7.1964070000000007,
+                                     -0.39225599999999999, -6.6216390000000001, -9.5518009999999993,
+                                     -9.2924690000000005, -6.7605589999999998, -0.65214700000000003,
+                                     -6.8852289999999989, -9.4557760000000002, -8.9364629999999998, -6.4736289999999999,
+                                     -0.96481800000000006, -6.051482, -9.7846860000000007, -8.5710630000000005,
+                                     -6.1461209999999999]})
+
+        # pivot the dataframe from long to wide form
+        pivot = tables_df.pivot(index='alignment', columns='scaling', values='error')
+
+        sns.heatmap(pivot, annot=True, fmt="g", cmap='viridis')
+        plt.show()
+
 
 
 
@@ -1221,7 +1250,7 @@ if __name__ == "__main__":
     # create_combined_figure()
 
     #We now want to see how much variation there is in the simulations for the predicted current and predicted fCP
-    # create_ratio_gradient_variability()
+    create_ratio_gradient_variability()
     # NSFA_ratio_gradient_variability()
     # visualize_nsfa_gradient_var()
 

@@ -815,27 +815,98 @@ def Amplitude_Decay_Simulation_Colored_Glu():
 def naive_diffusion_sim():
 
     fixed_folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\Diffusion_Testing\\test_epscs.xlsx"
-    fixed_glutamate_params = pd.DataFrame(
-        [{"gl_mean": 0, "gl_sd": 0, "distribution_type": "diffusion", "fixed_value": None}])
 
-    fixed_channel_params = pd.DataFrame(
-        [{"distribution_type": "fixed_value", "channel_sd": 0, "channel_mean": 0, "fixed_value": 200}])
+    glutamate_params = pd.DataFrame(
+        [{"gl_mean": 2.5, "gl_sd": 1, "distribution_type": "fixed_value", "fixed_value": 5,"diffusion":True}])
+
+    channel_params = pd.DataFrame(
+        [{"distribution_type": "normal", "channel_sd": 700, "channel_mean": 2200, "fixed_value": None}])
 
 
-    EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=200,channel_params=fixed_channel_params,glutamate_params=fixed_glutamate_params, output_file_path=fixed_folder_path)
+    EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=200,channel_params=channel_params,glutamate_params=glutamate_params, output_file_path=fixed_folder_path)
 
 
 def Rise_Times_Amps_Diffusion_Sim():
     print("Beginning Diffusion Sim rise time/amplitude analysis")
+    folder_path = r"C:\Users\jawad\Downloads\Python-EPSC-NSFA-Pipeline\Scripts\Experiments\Simulation_Glu_N_Settings_Investigation\Diffusion_Testing"
+
+    for file in os.listdir(folder_path):
+        if not file.endswith(".xlsx"):
+            continue
+
+        file_path = os.path.join(folder_path, file)
+        print(f"Processing file {file_path}")
+
+        # Load data once
+        simulation_EPSCs = pd.read_excel(file_path, sheet_name=0)
+        channel_data = pd.read_excel(file_path, sheet_name="Channel Data")
+
+        # Extract features
+        simulation_rise_times = egg.rise_times_histogram_creator(simulation_EPSCs, folder_name=folder_path, plt_show=False)
+        simulation_amplitudes = egg.amplitude_histogram_creator(simulation_EPSCs, folder_name=folder_path, plt_show=False)
+
+        open_channels = channel_data['Open Channels']
+        glut_data = channel_data['Glutamate Concentration']
+
+        # Clean up dataframes
+        df = pd.DataFrame({
+            'RiseTimes': simulation_rise_times,
+            'Amplitudes': simulation_amplitudes,
+            'OpenChannels': open_channels.values,
+            'Glu': glut_data.values
+        })
+
+        # Convert string values to floats if needed
+        for col in ['OpenChannels', 'Glu']:
+            df[col] = df[col].apply(lambda x: float(ast.literal_eval(x)[0]) if isinstance(x, str) else float(x))
+
+        # Set up figure with two subplots
+        fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharex=True, sharey=True)
+
+        # ---- Subplot 1: Open Channels ----
+        ax = axes[0]
+        norm = mcolors.Normalize(vmin=100, vmax=1500)
+        sc1 = ax.scatter(df['RiseTimes'], df['Amplitudes'], c=df['OpenChannels'],
+                         cmap=cm.viridis, norm=norm)
+        cbar1 = fig.colorbar(sc1, ax=ax)
+        cbar1.set_label("Open Channels")
+        ax.set_title("Rise Times vs Amplitude (Open Channels)")
+        ax.set_xlabel("Rise Times (ms)")
+        ax.set_ylabel("Max Amplitudes (pA)")
+        ax.set_xlim(0, 0.4)
+        ax.set_ylim(0, 1000)
+
+        # ---- Subplot 2: Glutamate Concentration ----
+        ax = axes[1]
+        norm = mcolors.Normalize(vmin=df['Glu'].min(), vmax=df['Glu'].max())
+        sc2 = ax.scatter(df['RiseTimes'], df['Amplitudes'], c=df['Glu'],
+                         cmap=cm.viridis, norm=norm)
+        cbar2 = fig.colorbar(sc2, ax=ax)
+        cbar2.set_label("Glutamate Concentration (mM)")
+        ax.set_title("Rise Times vs Amplitude (Glutamate)")
+        ax.set_xlabel("Rise Times (ms)")
+        ax.set_xlim(0, 0.4)
+        ax.set_ylim(0, 1000)
+
+        plt.suptitle(f"Rise Times vs. Amplitude for {file[:-5]}", fontsize=14)
+        plt.tight_layout()
+        plt.show()
+
+
+
+def Rise_Times_Diffusion_Colored_Glu():
+    print("Beginning rise time/amplitude analysis")
     folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\Diffusion_Testing"
+    cmap = cm.get_cmap('tab20', 20)  # 40 samples for smooth interpolation
+    label_colors = {i: cmap(i / 19) for i in np.arange(0, 10, 0.5)}
 
     for file in os.listdir(folder_path):
         if file.endswith(".xlsx"):
             file_path = os.path.join(folder_path, file)
             print(f"Creating histogram for file {file_path}")
-            simulation_EPSCs = pd.read_excel(file_path, sheet_name=0)
-            channel_data = pd.read_excel(file_path, sheet_name="Channel Data")
-            open_channels = channel_data['Open Channels']
+            simulation_EPSCs = pd.read_excel(file_path,sheet_name=0)
+            channel_data = pd.read_excel(file_path,sheet_name="Channel Data")
+            glut_data = channel_data['Glutamate Concentration']
             simulation_rise_times = egg.rise_times_histogram_creator(simulation_EPSCs, folder_name=folder_path,
                                                                      plt_show=False)
             simulation_amplitudes = egg.amplitude_histogram_creator(simulation_EPSCs, folder_name=folder_path,
@@ -843,29 +914,33 @@ def Rise_Times_Amps_Diffusion_Sim():
             plt.close('all')
             print(len(simulation_amplitudes))
             print(len(simulation_rise_times))
-            print(open_channels.shape)
+            print(glut_data.shape)
 
-            df = pd.DataFrame({'RiseTimes': simulation_rise_times, 'Amplitudes': simulation_amplitudes,
-                               'open_channels': open_channels.values})
+            df = pd.DataFrame({'RiseTimes':simulation_rise_times,'Amplitudes':simulation_amplitudes,'Glu':channel_data['Glutamate Concentration'].values})
 
             fallback_cmap = cm.get_cmap('viridis')
-            df['open_channels'] = df['open_channels'].apply(
-                lambda x: float(ast.literal_eval(x)[0]) if isinstance(x, str) else float(x))
+            df['Glu'] = df['Glu'].apply(lambda x: float(ast.literal_eval(x)[0]) if isinstance(x, str) else float(x))
 
-            norm = mcolors.Normalize(vmin=100, vmax=1500)
+            norm = mcolors.Normalize(vmin=df['Glu'].min(), vmax=df['Glu'].max())
 
             sc = None
 
-            for label, group in df.groupby('open_channels'):
-                # Use continuous colormap
-                sc = plt.scatter(group['RiseTimes'], group['Amplitudes'],
-                                 c=[label] * len(group), cmap=fallback_cmap, norm=norm,
-                                 label=f'{label}')
+            for label, group in df.groupby('Glu'):
+                if label in label_colors:
+                    color = label_colors[label]
+                    plt.scatter(group['RiseTimes'], group['Amplitudes'], color=color)
+                else:
+                    # Use continuous colormap
+                    sc = plt.scatter(group['RiseTimes'], group['Amplitudes'],
+                                     c=[label] * len(group), cmap=fallback_cmap, norm=norm,
+                                     label=f'{label}')
 
             # Add colorbar if any point used the continuous colormap
             if sc is not None:
                 cbar = plt.colorbar(sc)
-                cbar.set_label("Open Channels")
+                cbar.set_label("Glutamate Concentration (mM)")
+            else:
+                plt.legend(title="Glutamate Concentration (mM)")
             # Add common plot elements
             plt.title(f"Rise Times vs. Amplitude for {file[:-4]}")
             plt.xlabel("Rise Times (ms)")
@@ -874,10 +949,15 @@ def Rise_Times_Amps_Diffusion_Sim():
             plt.ylim(0, 1000)
 
             # Save or show the completed plot
-            plt.savefig(f"{file[:-4]}-n.png")
-            plt.show()
+            plt.savefig(f"{file[:-4]}.png")
 
 
+
+
+
+
+
+            # plt.show()
 
 if __name__ == "__main__":
     #create_fixed_simulation()
@@ -919,13 +999,13 @@ if __name__ == "__main__":
     # NSFA_continous_optimized()
 
     #If we run NSFA with ALL options on the optimization, what do we get?
-    NSFA_continous_optimized_all_matrix_options()
+    # NSFA_continous_optimized_all_matrix_options()
 
     #Some very strange looking things. Let's try a control.
-    NSFA_control_all_options()
+    # NSFA_control_all_options()
 
     #Are we 1000% sure the control is a control
-    create_fixed_simulation()
+    # create_fixed_simulation()
 
     #Figured out the issue. Now moving on to Amplitude VS Decay Plots
     # Amplitude_Decay_Simulation_Analysis()
@@ -933,5 +1013,7 @@ if __name__ == "__main__":
     # Amplitude_Decay_Simulation_Colored_Glu()
 
     #Experimentally, let's try some naive models of diffusion.
+    naive_diffusion_sim()
+    Rise_Times_Amps_Diffusion_Sim()
 
 
