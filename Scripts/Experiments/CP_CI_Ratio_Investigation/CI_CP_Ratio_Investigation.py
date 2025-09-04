@@ -967,14 +967,15 @@ def create_ratio_gradient_variability():
             cp_ratio = 1 - ci_ratio
             current_params = pd.DataFrame([{"iCP_Multiplier":3,"CP_Ratio":cp_ratio}])
             print(f"Creating EPSCs for CI: {ci_ratio} CP: {cp_ratio}")
-            output_file_path = f'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/CP_CI_Ratio_Investigation/EPSC_Variability_Ratio_Gradients/epsc5000_grad_ci{int(ci_ratio*10)}_cp{int(cp_ratio*10)}.xlsx'
+            output_file_path = f'C:/Users/j.mona/Documents/GitHub/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/CP_CI_Ratio_Investigation/EPSC_Variability_Ratio_Gradients/epsc5000_grad_ci{int(ci_ratio*10)}_cp{int(cp_ratio*10)}.xlsx'
             EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=5000,channel_params=channel_params,glutamate_params=glutamate_params,current_params=current_params,output_file_path=output_file_path)
 
 
 def NSFA_ratio_gradient_variability():
     ##Create a combined matrix
     output_file = 'epsc_ratio_gradient_var.xlsx'
-    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\EPSC_Variability_Ratio_Gradients"
+    folder_path = "C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\EPSC_Variability_Ratio_Gradients"
+    # folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\EPSC_Variability_Ratio_Gradients"
 
     # with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
     #     for file in os.listdir(folder_path):
@@ -1018,17 +1019,17 @@ def NSFA_ratio_gradient_variability():
         "scaling": ["minimize_error", "peak_scaling_at_peak_time", "peak_to_peak_scaling"],
         "output": ["linear", "parabolic"],
         "file_name": output_file,
-        "folder_name": "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\NSFA_Variability_Ratio_Gradients",
+        "folder_name": "C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\NSFA_Variability_Ratio_Gradients",
         "recording_duration": 16
     }
 
-    multiplier_ratio_matrix = matrix_generator(params, first_sheet=False,save_figs=False)
+    multiplier_ratio_matrix = matrix_generator(params, first_sheet=False,save_figs=False,debug=True)
     matrix_df = pd.DataFrame(multiplier_ratio_matrix)
-    matrix_df.to_excel('nsfa_var_ratio_gradient.xlsx')
+    matrix_df.to_excel('nsfa_var_ratio_gradient_cont.xlsx')
 
 def visualize_nsfa_gradient_var():
     # Load data
-    df = pd.read_excel("nsfa_var_ratio_gradient.xlsx")
+    df = pd.read_excel("nsfa_var_ratio_gradient_cont.xlsx")
 
     # Split out condition vs run
     df['run'] = df['ratio condition'].str.extract(r'_(\d+)$').astype(int)
@@ -1250,8 +1251,8 @@ if __name__ == "__main__":
     # create_combined_figure()
 
     #We now want to see how much variation there is in the simulations for the predicted current and predicted fCP
-    create_ratio_gradient_variability()
-    # NSFA_ratio_gradient_variability()
+    # create_ratio_gradient_variability()
+    NSFA_ratio_gradient_variability()
     # visualize_nsfa_gradient_var()
 
     #New question: for our CDF fit data, is there an increase in 1.) variability and 2.)

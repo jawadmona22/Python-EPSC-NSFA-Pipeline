@@ -269,29 +269,24 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
     glut_distribution = glutamate_params["distribution_type"][0]
     channel_sd = channel_params["channel_sd"][0]
     channel_mean = channel_params["channel_mean"][0]
-    #num_EPSCs = 1000
     lotbl = -3000 * np.log(np.arange(1, 10001) * 0.0001)
     count = 1
     iCI = .56
-    if len(current_params) != 0:
-        iCP = iCI * current_params["iCP_Multiplier"][0]
-    else:
-        iCP = 0
-    # iSC = .56 #Calculated using the known conductance and holding potential of -70mV
-    all_EPSCs = []
-    all_total_channel_nums = []
-    all_open_channel_nums = []
-    CP_channels = []
-    CI_channels = []
-    cp_channel_nums = []
-    ci_channels_nums = []
-    #glutamate_distribution_type = glutamate_params["distribution_type"]
-    glutamate_tracker = []
-    peak_CP_channels_open = []
-    peak_CI_channels_open = []
+    iCP = iCI * current_params["iCP_Multiplier"][0] if len(current_params) > 0 else 0
+
+    #Pre-Allocating arrays helps with memory management
+    all_EPSCs = np.zeros((num_EPSCs, 800))
+    all_total_channel_nums = np.zeros(num_EPSCs, dtype=int)
+    cp_channel_nums = np.zeros(num_EPSCs, dtype=int)
+    ci_channels_nums = np.zeros(num_EPSCs, dtype=int)
+    peak_CP_channels_open = np.zeros(num_EPSCs)
+    peak_CI_channels_open = np.zeros(num_EPSCs)
+    glutamate_tracker = np.zeros(num_EPSCs)
+
     with tqdm(total=num_EPSCs, desc=f"Processing EPSCs for CH:{channel_distribution}  glut:{glut_distribution} ") as pbar:
 
-        while count < num_EPSCs: #marking EPSCs
+        # while count < num_EPSCs: #marking EPSCs
+        for count in range(num_EPSCs):
             if glutamate_params["distribution_type"][0] == "fixed_value":
                 if glutamate_params["fixed_value"][0] !=None:
                     glutamate_scale = glutamate_params["fixed_value"][0]
@@ -301,121 +296,41 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
                     glutamate_scale = pick_glutamate_scale(glutamate_params)
 
 
-            glutamate_tracker.append(glutamate_scale)
+            glutamate_tracker[count] = glutamate_scale
             AgPulse = Agonist_Pulse(glutamate_scale,steady=agonist_steady,second_pulse=double_agonist)
-            indx = 1
-            # AgScale = random.uniform(1, 2)
-            # AgPulseScaled = AgScale * AgPulse
             all_Channels_Arrays = []  # List to store all channels for a single EPSC
+
             if channel_params["distribution_type"][0] == "fixed_value":
                 num_channels = channel_params["fixed_value"][0]
             else:
                 num_channels = pick_number_channels(channel_distribution, sd=channel_sd, mean=channel_mean)
-            #num_channels = pick_number_channels(method=channel_distribution, mog_params=mog_params)
-            time = np.linspace(0, 16, 800)
-            # if "diffusion" in glutamate_params:
-            #     if glutamate_params["diffusion"][0] == True:
-            #         # scale_factors = [1,.75,.5]
-            #         # step_size = num_channels // len(scale_factors)
-            #         # channel_splits = np.arange(step_size, step_size*len(scale_factors), step_size)
-            #         if num_channels < 800:
-            #             dif_idx = 0
-            #         if num_channels >= 800 and num_channels <2200:
-            #             dif_idx = 1
-            #         if num_channels >= 2200:
-            #             dif_idx = 2
-            #
-            #         scale_factors = [5,3,1]
-            #         channel_splits = [100000000000000]
-            #
-            #
-            #     else:
-            #         dif_idx = 0
-            #         channel_splits = [100000000000000]
-            #         scale_factors = [1]
-            # else:
-            #     dif_idx = 0
-            #     channel_splits = [100000000000000]
-            #     scale_factors = [1]
-            # dif_idx = 0
-            while indx < num_channels: #marking  number of channels
-                # if indx in channel_splits:
-                #     dif_idx +=1
-                # AgPulse = scale_factors[dif_idx] * AgPulse
-                # print(channel_params.columns)
-                if len(current_params) > 0:
-                    num_CP = int(num_channels * current_params["CP_Ratio"][0])
-                else:
-                    num_CP = 0
-                # print(f"We have {num_channels} channels and {num_CP} are CP")
-                if indx < num_CP:
-                    iSC = iCP
-                    channel_type = 'CP'
-                else:
-                    iSC = iCI
-                    channel_type = 'CI'
-                single_channel_array = np.zeros((800,))
-                npl = 0
-                next_state = 'StateC0'
-                while npl < 800: #800 refers to the number of timepoints
-                    if next_state == 'StateC0':
-                        npl,next_state = StateC0(npl,AgPulse)
 
-                    if next_state == 'StateC1':
-                        npl,next_state = StateC1(npl,lotbl,AgPulse)
-
-                    if next_state == 'StateC2':
-                        npl,next_state = StateC2(npl,lotbl)
-
-                    if next_state == 'StateC3':
-                        npl,next_state = StateC3(npl,lotbl,AgPulse)
-
-                    if next_state == 'StateC4':
-                        npl,next_state = StateC4(npl,lotbl)
-
-                    if next_state == 'StateC5':
-                        npl,next_state = StateC5(npl,lotbl)
-
-                    if next_state == 'Open':
-                        start_open = npl
-                        npl,next_state = Open(npl,lotbl)
-                        for i in range (start_open, npl):
-                            if i < 800:
-                                single_channel_array[i] = iSC
-                    if next_state == 'End':
-                        break
-                indx += 1
-                all_Channels_Arrays.append(single_channel_array)
-                if channel_type == 'CP':
-                    CP_channels.append(single_channel_array)
-                else:
-                    CI_channels.append(single_channel_array)
+            if len(current_params) > 0:
+                num_CP = int(num_channels * current_params["CP_Ratio"][0])
+            else:
+                num_CP = 0
 
 
+            cp_channel_nums[count] = num_CP
+            ci_channels_nums[count] = num_channels - num_CP
+            all_total_channel_nums[count] = num_channels
+            single_EPSC,CP_portion_EPSC,CI_portion_EPSC = process_channels_vectorized(num_channels,num_CP,AgPulse,lotbl,iCP,iCI)
 
-            count +=1
+            all_EPSCs[count] = single_EPSC
+
+            if num_CP > 0 and iCP > 0:
+                peak_CP_channels_open[count] = np.max(CP_portion_EPSC)/iCP
+
+            if (num_channels - num_CP) > 0 and iCI > 0:
+                peak_CI_channels_open[count] = np.max(CI_portion_EPSC)/iCI
+
             pbar.update(1)
-            single_EPSC = np.sum(all_Channels_Arrays, axis=0)
-            # peak_channels_open = np.max(single_EPSC) / .56
-            CP_portion_EPSC = np.sum(CP_channels,axis=0)
-            peak_CP_channels_open.append(np.max(CP_portion_EPSC) / iCP)
 
-            CI_portion_EPSC = np.sum(CI_channels,axis=0)
-            peak_CI_channels_open.append( np.max(CI_portion_EPSC) / iCI)
-
-            all_total_channel_nums.append(num_channels)
-
-            # all_open_channel_nums.append(peak_channels_open)
-
-            cp_channel_nums.append(num_CP)
-            ci_channels_nums.append(num_channels - num_CP)
-
-            all_EPSCs.append(single_EPSC)
     time = np.linspace(0, 16, 2000)
-    # plt.plot(time,AgPulse/10)
-    plt.xlabel("Time (ms)")
-    plt.ylabel("Current (pA)")
-    plt.savefig(f"{channel_distribution}_channels_{glut_distribution}_glut_rawEPSCs.png")
+    # # plt.plot(time,AgPulse/10)
+    # plt.xlabel("Time (ms)")
+    # plt.ylabel("Current (pA)")
+    # plt.savefig(f"{channel_distribution}_channels_{glut_distribution}_glut_rawEPSCs.png")
 
     EPSCs_df = pd.DataFrame(all_EPSCs)
 
@@ -428,6 +343,8 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
         "Open CI Channels":peak_CI_channels_open,
         "Glutamate Concentration":glutamate_tracker
     })
+
+
     if output_file_path == None:
         print("No file path specified. Using the last known...")
         output_file_path = f'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/EPSCs_unspecified.xlsx'
@@ -436,28 +353,75 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
         channel_data_df.to_excel(writer, sheet_name="Channel Data", index=False)
     return EPSCs_df,all_total_channel_nums,channel_data_df
 
-#
-#
-# EPSC_Calc("uniform",1)
-# EPSC_Calc("uniform",10)
-# EPSC_Calc("uniform",100)
-# EPSC_Calc("normal",1)
-# EPSC_Calc("normal",10)
-# EPSC_Calc("normal",100)
-# EPSC_Calc("normal",channel_sd=560,channel_mean=1800)
 
-# glu_array = [.1,1,10,100,1000]
-# n_array = [200, 400, 800, 1600,3200]
-#
-#
-#
-# for n in n_array:
-#     for conc_glu in glu_array:
-#         glutamate_params = pd.DataFrame([{"gl_mean": 3.5, "gl_sd": .5, "distribution_type": "fixed_value","fixed_value":conc_glu}])
-#
-#         channel_params = pd.DataFrame([{"distribution_type":"fixed_value", "channel_sd":None,"channel_mean":None,"fixed_value":n}])
-#
-#         EPSC_Calc(num_EPSCs=1000,channel_params=channel_params,glutamate_params=glutamate_params)
+def process_channels_vectorized(num_channels,num_CP,AgPulse,lotbl,iCP,iCI):
+    #Used to help optimize the processing of different types of channels
+    all_channels = np.zeros((num_channels,800))
+    CP_channels = np.zeros((num_CP,800)) if num_CP > 0 else np.zeros((0,800))
+    CI_channels = np.zeros((num_channels - num_CP,800)) if num_channels - num_CP > 0 else np.zeros((0,800))
+
+    cp_idx = 0
+    ci_idx = 0
+
+    for channel_idx in range(num_channels):
+        if channel_idx < num_CP:
+            iSC = iCP
+            is_CP = True
+        else:
+            iSC = iCI
+            is_CP = False
+
+        channel_trace = process_single_channel(AgPulse,lotbl,iSC)
+        all_channels[channel_idx] = channel_trace
+
+        if is_CP:
+            CP_channels[cp_idx] = channel_trace
+            cp_idx += 1
+
+        else:
+            CI_channels[ci_idx] = channel_trace
+            ci_idx +=1
+
+    single_EPSC = np.sum(all_channels, axis = 0)
+    if np.isnan(single_EPSC).any():
+        print("NaN Alert")
+    CP_portion_EPSC = np.sum(CP_channels,axis = 0 ) if num_CP > 0 else np.zeros(800)
+    CI_portion_EPSC = np.sum(CI_channels,axis = 0 ) if num_channels - num_CP > 0 else np.zeros(800)
+
+    return single_EPSC, CP_portion_EPSC, CI_portion_EPSC
+
+def process_single_channel(AgPulse,lotbl,iSC):
+    single_channel_array = np.zeros((800,))
+    npl = 0
+    next_state = 'StateC0'
+    while npl < 800:  # 800 refers to the number of timepoints
+        if next_state == 'StateC0':
+            npl, next_state = StateC0(npl, AgPulse)
+
+        if next_state == 'StateC1':
+            npl, next_state = StateC1(npl, lotbl, AgPulse)
+
+        if next_state == 'StateC2':
+            npl, next_state = StateC2(npl, lotbl)
+
+        if next_state == 'StateC3':
+            npl, next_state = StateC3(npl, lotbl, AgPulse)
+
+        if next_state == 'StateC4':
+            npl, next_state = StateC4(npl, lotbl)
+
+        if next_state == 'StateC5':
+            npl, next_state = StateC5(npl, lotbl)
+
+        if next_state == 'Open':
+            start_open = npl
+            npl, next_state = Open(npl, lotbl)
+            for i in range(start_open, npl):
+                if i < 800:
+                    single_channel_array[i] = iSC
+        if next_state == 'End':
+            break
+        return single_channel_array
 
 
 

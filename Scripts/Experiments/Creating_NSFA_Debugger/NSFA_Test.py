@@ -15,7 +15,7 @@ involved with EPSC Simulation-->NSFA Matrix Generator'''
 
 def test_EPSC_Simulator():
     glutamate_params = pd.DataFrame(
-        [{"gl_mean": None, "gl_sd": None, "distribution_type": "fixed_value", "fixed_value": 3}])
+        [{"gl_mean": 2.5, "gl_sd": 1, "distribution_type": "normal", "fixed_value": None,"continuous":True}])
 
     channel_params = pd.DataFrame(
         [{"distribution_type": "fixed_value", "channel_sd": None, "channel_mean": None, "fixed_value": 1000}])
@@ -75,6 +75,6 @@ def test_alignment_debug():
 
 
 if __name__ == '__main__':
-    # test_EPSC_Simulator()
+    test_EPSC_Simulator()
     # test_NSFA_analysis()
-    test_alignment_debug()
+    # test_alignment_debug()

@@ -163,10 +163,21 @@ def create_template(data, time_duration,num_samples):
     # Extract EPSC values
     EPSCs = data[:, :]  # Shape is (sample_size,number_traces)
     # Find the average EPSC from this
+    print(np.isnan(EPSCs).any())
+    print(np.isnan(EPSCs).sum())
     template = np.mean(EPSCs, axis=1)
-    plt.plot(timepoints,template,color='black')
-    plt.plot(timepoints,EPSCs)
-    plt.title("EPSC Template debugging")
+    print(np.isinf(EPSCs).any())
+    print(EPSCs.dtype)
+    print(np.max(EPSCs), np.min(EPSCs))
+    print(EPSCs.shape)
+    print(f"Template shape: {template.shape}")
+    nan_positions = np.where(np.isnan(EPSCs))
+    print(f"Row indices with NaN: {nan_positions[0]}")
+    print(f"Column indices with NaN: {nan_positions[1]}")
+
+    # plt.plot(timepoints,template,color='black')
+    # plt.plot(timepoints,EPSCs)
+    # plt.title("EPSC Template debugging")
     return timepoints, template
 
 
