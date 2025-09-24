@@ -296,6 +296,10 @@ def create_minimize_error_residuals(scale_factor, raw, average):  #Scaling templ
     term1 = (raw - average * scale_factor * (max_raw / max_average)) ** 2
     return term1
 
+def raw_residuals(raw,average):
+    term1 = (raw - average[:, None]) ** 2
+    return term1
+
 def create_residual_array_template_scaled_to_individual(individual,template,peak_to_peak=False):
     scale_factor = scale_peak_to_individual(template=template,raw_trace=individual,peak_to_peak=peak_to_peak)
     error = ((template * scale_factor) - individual)**2
@@ -353,6 +357,8 @@ def create_residuals(num_traces,EPSCs_sorted,template, error_minimize=True, peak
 
         else:
             residuals_array[:, i] = create_residual_array_template_scaled_to_individual(EPSCs_sorted[:, i], template,peak_to_peak)
+
+
     return residuals_array
 def create_segment_indices(template,start_option):
 

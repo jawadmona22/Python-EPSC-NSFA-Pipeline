@@ -165,8 +165,8 @@ def Open(npl,lotbl):
     if npl > 800:
         return npl, "End"
     tpoint = .00002
-    kOC2 = 12000 * tpoint #8000 * tpoint
-    kOC5 = 363 * tpoint #242 * tpoint
+    kOC2 = 12000 * tpoint # 8000 * tpoint
+    kOC5 = 363 * tpoint # 242 * tpoint
     dO5 = (1 / (3000 * kOC5)) * lotbl[int(10000*random.uniform(0,1))]
     dO2 = (1 / (3000 * kOC2)) * lotbl[int(10000*random.uniform(0,1))]
 
@@ -271,7 +271,7 @@ def EPSC_Calc(num_EPSCs,channel_params,glutamate_params=[],mog_params = [],curre
     channel_mean = channel_params["channel_mean"][0]
     lotbl = -3000 * np.log(np.arange(1, 10001) * 0.0001)
     count = 1
-    iCI = .56
+    iCI = .56 *4
     iCP = iCI * current_params["iCP_Multiplier"][0] if len(current_params) > 0 else 0
 
     #Pre-Allocating arrays helps with memory management
@@ -372,6 +372,11 @@ def process_channels_vectorized(num_channels,num_CP,AgPulse,lotbl,iCP,iCI):
             is_CP = False
 
         channel_trace = process_single_channel(AgPulse,lotbl,iSC)
+        if np.isnan(channel_trace.any()):
+            print("NaN Channel Alert")
+            nan_indices = np.where(np.isnan(channel_trace))[0]
+            print("NaN at indices:", nan_indices)
+
         all_channels[channel_idx] = channel_trace
 
         if is_CP:
@@ -421,7 +426,11 @@ def process_single_channel(AgPulse,lotbl,iSC):
                     single_channel_array[i] = iSC
         if next_state == 'End':
             break
-        return single_channel_array
+
+        if single_channel_array.any() == None:
+            print("Error: Single Channel Array is None")
+
+    return single_channel_array
 
 
 

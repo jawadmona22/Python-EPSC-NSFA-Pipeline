@@ -163,7 +163,10 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
 
                 elif scaling_type == "peak_to_peak_scaling":
                     residuals_array = EPSC_App_Connection.create_residuals(num_traces, raw_sorted,template,
+
                                                                                                     error_minimize=False,peak_to_peak=True)
+                elif scaling_type == "raw":
+                    residuals_array = EPSC_App_Connection.raw_residuals(raw_sorted,template)
                 #For each analysis start point option
                 for start_option in params["analysis_start_point"]:
                     segment_indices = EPSC_App_Connection.create_segment_indices(template, start_option)
@@ -216,7 +219,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                         if "mean_channels" in params:
                             #Plot the idealized parabola
                             N = params["mean_channels"]
-                            ideal_parabola = np.poly1d([-1/N,.56,0])
+                            ideal_parabola = np.poly1d([-1/N,.56*4,0])
                             roots = ideal_parabola.r
                             x_vals = np.linspace(min(roots) - 1, max(roots) + 1, 500)
                             axs.plot(x_vals,ideal_parabola(x_vals),color='blue')

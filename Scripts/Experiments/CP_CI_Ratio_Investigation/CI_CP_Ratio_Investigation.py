@@ -967,49 +967,48 @@ def create_ratio_gradient_variability():
             cp_ratio = 1 - ci_ratio
             current_params = pd.DataFrame([{"iCP_Multiplier":3,"CP_Ratio":cp_ratio}])
             print(f"Creating EPSCs for CI: {ci_ratio} CP: {cp_ratio}")
-            output_file_path = f'C:/Users/j.mona/Documents/GitHub/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/CP_CI_Ratio_Investigation/EPSC_Variability_Ratio_Gradients/epsc5000_grad_ci{int(ci_ratio*10)}_cp{int(cp_ratio*10)}.xlsx'
+            output_file_path = f'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/Scripts/Experiments/CP_CI_Ratio_Investigation/EPSC_Variability_Ratio_Gradients/epsc5000_grad_ci{int(ci_ratio*10)}_cp{int(cp_ratio*10)}.xlsx'
             EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=5000,channel_params=channel_params,glutamate_params=glutamate_params,current_params=current_params,output_file_path=output_file_path)
 
 
 def NSFA_ratio_gradient_variability():
     ##Create a combined matrix
     output_file = 'epsc_ratio_gradient_var.xlsx'
-    folder_path = "C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\EPSC_Variability_Ratio_Gradients"
-    # folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\EPSC_Variability_Ratio_Gradients"
+    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\EPSC_Variability_Ratio_Gradients"
 
-    # with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
-    #     for file in os.listdir(folder_path):
-    #         if file.endswith(".xlsx"):
-    #             file_path = os.path.join(folder_path, file)
-    #             filename = os.path.splitext(file)[0]
-    #             print(f"Processing: {filename}")
-    #             # Open source file in streaming mode
-    #             wb = load_workbook(file_path, read_only=True)
-    #             ws = wb.active  # assuming first sheet
-    #
-    #             total_cols = ws.max_column
-    #             total_rows = ws.max_row
-    #
-    #             for i in range(0, total_cols, 1000):
-    #                 print(f"Iteration: {i//1000}")
-    #                 # Collect one 1000-column chunk
-    #                 data = []
-    #                 for row in ws.iter_rows(min_row=1, max_row=total_rows,
-    #                                         min_col=i + 1, max_col=min(i + 1000, total_cols),
-    #                                         values_only=True):
-    #                     data.append(row)
-    #
-    #                 df = pd.DataFrame(data)
-    #
-    #                 # Create sheet name
-    #                 parts = filename.split("_")
-    #                 ci_cp = "_".join(parts[-2:])  # e.g., "ci6_cp4"
-    #                 sheet_name = f"{ci_cp}_{i // 1000}"[:31]  # Excel sheet names <=31 chars
-    #
-    #                 df.to_excel(writer, sheet_name=sheet_name,
-    #                             index=False, header=False)
-    #
-    #             wb.close()
+    with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
+        for file in os.listdir(folder_path):
+            if file.endswith(".xlsx"):
+                file_path = os.path.join(folder_path, file)
+                filename = os.path.splitext(file)[0]
+                print(f"Processing: {filename}")
+                # Open source file in streaming mode
+                wb = load_workbook(file_path, read_only=True)
+                ws = wb.active  # assuming first sheet
+
+                total_cols = ws.max_column
+                total_rows = ws.max_row
+
+                for i in range(0, total_cols, 1000):
+                    print(f"Iteration: {i//1000}")
+                    # Collect one 1000-column chunk
+                    data = []
+                    for row in ws.iter_rows(min_row=1, max_row=total_rows,
+                                            min_col=i + 1, max_col=min(i + 1000, total_cols),
+                                            values_only=True):
+                        data.append(row)
+
+                    df = pd.DataFrame(data)
+
+                    # Create sheet name
+                    parts = filename.split("_")
+                    ci_cp = "_".join(parts[-2:])  # e.g., "ci6_cp4"
+                    sheet_name = f"{ci_cp}_{i // 1000}"[:31]  # Excel sheet names <=31 chars
+
+                    df.to_excel(writer, sheet_name=sheet_name,
+                                index=False, header=False)
+
+                wb.close()
 
 
     params = {
@@ -1019,17 +1018,17 @@ def NSFA_ratio_gradient_variability():
         "scaling": ["minimize_error", "peak_scaling_at_peak_time", "peak_to_peak_scaling"],
         "output": ["linear", "parabolic"],
         "file_name": output_file,
-        "folder_name": "C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\NSFA_Variability_Ratio_Gradients",
+        "folder_name": "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\NSFA_Variability_Ratio_Gradients",
         "recording_duration": 16
     }
 
-    multiplier_ratio_matrix = matrix_generator(params, first_sheet=False,save_figs=False,debug=True)
+    multiplier_ratio_matrix = matrix_generator(params, first_sheet=False,save_figs=False,debug=False)
     matrix_df = pd.DataFrame(multiplier_ratio_matrix)
-    matrix_df.to_excel('nsfa_var_ratio_gradient_cont.xlsx')
+    matrix_df.to_excel('nsfa_var_ratio_gradient_cont_v2.xlsx')
 
 def visualize_nsfa_gradient_var():
     # Load data
-    df = pd.read_excel("nsfa_var_ratio_gradient_cont.xlsx")
+    df = pd.read_excel("nsfa_var_ratio_gradient_cont_v2.xlsx")
 
     # Split out condition vs run
     df['run'] = df['ratio condition'].str.extract(r'_(\d+)$').astype(int)
@@ -1132,17 +1131,10 @@ def visualize_nsfa_gradient_var():
                 "icp": icp,
                 "pred_cp": fCP,
                 "true_cp": true_cp/10,
-                "error":((true_cp)/10)- fCP
+                "error":((true_cp)/10) - fCP
             })
             tables.append(table)
 
-            # Optional: round values for readability
-            # table = table.round(4)
-
-            # Print as a clean table
-            # print(table.to_string(index=False))
-
-            # Step 4: Plot
             plt.close('all')
 
             plt.figure(figsize=(6, 6))
@@ -1153,48 +1145,20 @@ def visualize_nsfa_gradient_var():
 
             xmin, xmax = plt.xlim()  # get current limits
             plt.xlim(xmax, xmin)  # reverse them
-
-
             plt.xlabel('True fCP')
             plt.ylabel('Error (True-Pred CP)')
             plt.title(f'Predicted vs True CP\nScaling: {scaling}, Alignment: {alignment}')
             plt.xlim([-.01,1.01])
-            lin_x = np.linspace(0,1,10)
-            lin_y = np.linspace(0,1,10)
-            plt.plot(lin_x,lin_y)
+            # lin_x = np.linspace(0,1,10)
+            # lin_y = np.linspace(0,1,10)
+            # plt.plot(lin_x,lin_y)
             plt.grid(True)
-            # plt.xlabel("True fCP")
             plt.tight_layout()
             # plt.show()
             plt.savefig(f'Ratio_Gradient_Plots/true_pred_cp_var/{scaling}-{alignment}-cp-comp.png')
 
         tables_df = pd.concat(tables)
         tables_df.to_excel("cp_invest.xlsx")
-        # load the sample data
-        df = pd.DataFrame({'MutProb': [0.1,
-                                       0.05, 0.01, 0.005, 0.001, 0.1, 0.05, 0.01, 0.005, 0.001, 0.1, 0.05, 0.01, 0.005,
-                                       0.001, 0.1, 0.05, 0.01, 0.005, 0.001, 0.1, 0.05, 0.01, 0.005, 0.001],
-                           'SymmetricDivision': [1.0, 1.0, 1.0, 1.0, 1.0, 0.8, 0.8, 0.8, 0.8, 0.8, 0.6, 0.6, 0.6, 0.6,
-                                                 0.6, 0.4, 0.4, 0.4, 0.4, 0.4, 0.2, 0.2, 0.2, 0.2, 0.2],
-                           'test': ['sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule',
-                                    'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule',
-                                    'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule',
-                                    'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule',
-                                    'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule', 'sackin_yule'],
-                           'value': [-4.1808639999999997, -9.1753490000000006, -11.408113999999999, -10.50245,
-                                     -8.0274750000000008, -0.72260200000000008, -6.9963940000000004,
-                                     -10.536339999999999, -9.5440649999999998, -7.1964070000000007,
-                                     -0.39225599999999999, -6.6216390000000001, -9.5518009999999993,
-                                     -9.2924690000000005, -6.7605589999999998, -0.65214700000000003,
-                                     -6.8852289999999989, -9.4557760000000002, -8.9364629999999998, -6.4736289999999999,
-                                     -0.96481800000000006, -6.051482, -9.7846860000000007, -8.5710630000000005,
-                                     -6.1461209999999999]})
-
-        # pivot the dataframe from long to wide form
-        pivot = tables_df.pivot(index='alignment', columns='scaling', values='error')
-
-        sns.heatmap(pivot, annot=True, fmt="g", cmap='viridis')
-        plt.show()
 
 
 
@@ -1252,7 +1216,7 @@ if __name__ == "__main__":
 
     #We now want to see how much variation there is in the simulations for the predicted current and predicted fCP
     # create_ratio_gradient_variability()
-    NSFA_ratio_gradient_variability()
-    # visualize_nsfa_gradient_var()
+    # NSFA_ratio_gradient_variability()
+    visualize_nsfa_gradient_var()
 
     #New question: for our CDF fit data, is there an increase in 1.) variability and 2.)

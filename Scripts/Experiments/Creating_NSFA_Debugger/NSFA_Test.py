@@ -13,19 +13,19 @@ alignment and all other variables are working properly. This is simply a validat
 involved with EPSC Simulation-->NSFA Matrix Generator'''
 
 
-def test_EPSC_Simulator():
+def EPSC_Simulator():
     glutamate_params = pd.DataFrame(
-        [{"gl_mean": 2.5, "gl_sd": 1, "distribution_type": "normal", "fixed_value": None,"continuous":True}])
+        [{"gl_mean": None, "gl_sd": None, "distribution_type": "fixed_value", "fixed_value": 10,"continuous":False}])
 
     channel_params = pd.DataFrame(
-        [{"distribution_type": "fixed_value", "channel_sd": None, "channel_mean": None, "fixed_value": 1000}])
+        [{"distribution_type": "fixed_value", "channel_sd": None, "channel_mean": None, "fixed_value": 100}])
 
 
     current_params = pd.DataFrame([{"iCP_Multiplier": 3, "CP_Ratio": 0}]) #Essentially, only CI
-
-    EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=100, channel_params=channel_params,
+    folder_path = r'C:\Users\jawad\Downloads\Python-EPSC-NSFA-Pipeline\data-files\test.xlsx'
+    EPSCs_df, all_total_channel_nums, channel_data_df = EPSC_Calc(num_EPSCs=500, channel_params=channel_params,
                                                                   glutamate_params=glutamate_params,
-                                                                  current_params=current_params)
+                                                                  current_params=current_params,output_file_path=folder_path)
 
 
 def test_NSFA_analysis():
@@ -75,6 +75,6 @@ def test_alignment_debug():
 
 
 if __name__ == '__main__':
-    test_EPSC_Simulator()
+    EPSC_Simulator()
     # test_NSFA_analysis()
     # test_alignment_debug()

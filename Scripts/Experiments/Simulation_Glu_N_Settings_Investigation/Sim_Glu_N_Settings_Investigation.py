@@ -678,18 +678,18 @@ def NSFA_continous_optimized_all_matrix_options():
 def NSFA_control_all_options():
 
     ##Create a combined matrix
-    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\fixed_EPSCs_gl1_ch200.xlsx"
+    folder_path = "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\test.xlsx"
     epscs = pd.read_excel(folder_path,sheet_name=0)
     channel_data = pd.read_excel(folder_path, sheet_name="Channel Data")
-    mean_channels = channel_data["Open Channels"].mean()
+    mean_channels = channel_data["Open CI Channels"].mean()
     params = {
         "alignment":["peak","midpoint","max_dv_dt"],
         "direct_df_input": True,
         "analysis_start_point":["peak_start",],
-        "scaling":["minimize_error","peak_scaling_at_peak_time","peak_to_peak_scaling"],
+        "scaling":["minimize_error","peak_scaling_at_peak_time","peak_to_peak_scaling","raw"],
         "output": ["linear","parabolic"],
-        "file_name": 'fixed_EPSCs_gl1_ch200.xlsx',
-        "folder_name": "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\NSFA_Output_Control",
+        "file_name": folder_path,
+        "folder_name": "C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\Simulation_Glu_N_Settings_Investigation\\NSFA_Output_Control_Test",
         "sheet_names": ["Control"],
         "EPSCs":epscs,
         "mean_channels":mean_channels,
@@ -699,7 +699,7 @@ def NSFA_control_all_options():
 
     matrix = matrix_generator(params, first_sheet=True)
     matrix_df = pd.DataFrame(matrix)
-    matrix_df.to_excel('control-matrix-gl1_ch200.xlsx')
+    matrix_df.to_excel('control-matrix-test.xlsx')
 
 def Amplitude_Decay_Simulation_Analysis():
 
@@ -1002,7 +1002,7 @@ if __name__ == "__main__":
     # NSFA_continous_optimized_all_matrix_options()
 
     #Some very strange looking things. Let's try a control.
-    # NSFA_control_all_options()
+    NSFA_control_all_options()
 
     #Are we 1000% sure the control is a control
     # create_fixed_simulation()
@@ -1013,7 +1013,7 @@ if __name__ == "__main__":
     # Amplitude_Decay_Simulation_Colored_Glu()
 
     #Experimentally, let's try some naive models of diffusion.
-    naive_diffusion_sim()
-    Rise_Times_Amps_Diffusion_Sim()
+    # naive_diffusion_sim()
+    # Rise_Times_Amps_Diffusion_Sim()
 
 
