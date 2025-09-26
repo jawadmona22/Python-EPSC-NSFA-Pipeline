@@ -5,7 +5,7 @@ import numpy as np
 import Scripts.NSFA_Tools.EPSC_Graphic_Utilities as egg
 import matplotlib.pyplot as plt
 #Initialize some values
-num_decay_segments = 20
+num_decay_segments = 50
 
 
 
@@ -393,7 +393,7 @@ def create_segment_indices(template,start_option):
 
 
 
-        if len(segment_indices) == 21:
+        if len(segment_indices) == num_decay_segments + 1:
             break
 
 

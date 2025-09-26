@@ -1,27 +1,31 @@
 # Re-run the Gillespie simulation and plotting for the 3-state model.
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.integrate import solve_ivp
 
+
 # Parameters
-kon = 1e8
+kon = 1e8 #s-1
 koff = 5e4
 Beta = 1e5
 Alpha = 1e3
 agonist_conc = 1e-3
 
-N = 500
-g = 10e-12
+N = 50
+g = 20e-12
 V_hold = -100e-3
 V_rev = 0.0
 
 pulse_start = 0.001
-pulse_end = 0.002
+pulse_end = pulse_start + .000025  #One time step
 
-t_max = 0.05
+t_max = 0.06
 n_samples = 2000
 t_eval = np.linspace(0, t_max, n_samples)
 time_ms = t_eval * 1e3
+
+num_traces = 100
 
 def agonist_conc_t(t):
     return agonist_conc if (pulse_start <= t <= pulse_end) else 0.0
@@ -50,7 +54,7 @@ def simulate_one_channel(t_max):
     times = [t]
     states = [state]
     while t < t_max:
-        trans = rates_for_state(state, t)
+        trans = rates_for_state(state, t) #[(1,0)] = trans
         rates = np.array([r for (_, r) in trans])
         a0 = rates.sum()
         boundary = next_pulse_boundary_after(t)
@@ -153,8 +157,53 @@ plt.axvspan(pulse_start*1e3, pulse_end*1e3, alpha=0.15)
 plt.tight_layout()
 plt.show()
 
+
+plt.figure(figsize=(10,3))
+plt.plot(time_ms, I_pA)
+plt.plot(time_ms, I_det_pA, label='Deterministic (mean-field)', linewidth=1)
+plt.xlabel('Time (ms)')
+plt.ylabel('Current (pA)')
+plt.title('Stochastic (one trial) vs Deterministic mean current')
+plt.legend()
+plt.axvspan(pulse_start*1e3, pulse_end*1e3, alpha=0.15)
+plt.tight_layout()
+plt.show()
+
 steady_open_fraction_det = P_O[-1]
 I_ss_det_pA = (N * g * steady_open_fraction_det * (V_hold - V_rev)) * 1e12
 print(f"Deterministic steady-state open fraction at end of simulation: {steady_open_fraction_det:.6f}")
 print(f"Deterministic steady-state current: {I_ss_det_pA:.2f} pA")
 
+# Simulate EPSCs
+all_traces = []
+
+for trace_id in range(num_traces):
+    open_counts = np.zeros_like(t_eval, dtype=int)
+
+    # simulate N independent channels and sum their openings
+    for n in range(N):
+        times_n, states_n = simulate_one_channel(t_max)
+        open_counts += events_to_sampled_open(times_n, states_n, t_eval)
+
+    # convert to current
+    I = open_counts * g * (V_hold - V_rev)  # Amps
+    I_pA = I * 1e12                         # picoAmps
+
+    all_traces.append(I_pA)
+
+# Convert to DataFrame: each column is one trace, rows are timepoints
+df = pd.DataFrame(np.array(all_traces).T, index=t_eval)
+
+plt.xlabel("Time (ms)")
+plt.ylabel("Current (pA)")
+for col in df.columns:
+    plt.plot(df.index*1e3,df[col],alpha=.3)
+template = np.mean(df,axis=1)
+plt.plot(df.index*1e3,template)
+plt.title("Traynelis Replica, 100 EPSCs")
+plt.show()
+df.columns = [f"trace_{i+1}" for i in range(num_traces)]
+
+
+df = df*-1
+df.to_excel("Tranyelis_replica_EPSCs.xlsx")

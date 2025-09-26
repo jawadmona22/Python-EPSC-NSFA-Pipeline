@@ -31,7 +31,7 @@ def EPSC_Simulator():
 def test_NSFA_analysis():
     print("TESTING NSFA ANALYSIS")
     ##Create a combined matrix
-    file_name = 'EPSCs_unspecified.xlsx'
+    file_name = 'C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\experimental-scripts\\Tranyelis_replica_EPSCs.xlsx'
     folder_path = 'EPSCs_Test_Files'
 
     params = {
@@ -41,7 +41,8 @@ def test_NSFA_analysis():
         "scaling": ["minimize_error"],
         "output": ["linear", "parabolic"],
         "file_name": file_name,
-        "folder_name": folder_path
+        "folder_name": folder_path,
+        "recording_duration":60
 
     }
 
@@ -52,29 +53,31 @@ def test_NSFA_analysis():
 def test_alignment_debug():
     print("TESTING Alignment Debug ANALYSIS")
     ##Create a combined matrix
-    file_name = 'EPSCs_unspecified.xlsx'
+    file_name = 'C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\experimental-scripts\\Tranyelis_replica_EPSCs.xlsx'
     folder_path = 'EPSCs_Test_Files'
 
     params = {
         "direct_df_input": None,
-        "alignment": ["max_dv_dt"],
-        "analysis_start_point": ["peak_start","alignment_point"],
-        "scaling": ["minimize_error"],
+        "alignment": ["peak", "None"],
+        "analysis_start_point": ["peak_start"],
+        "scaling": ["minimize_error","raw","peak_scaling_at_peak_time"],
         "output": ["linear", "parabolic"],
         "file_name": file_name,
         "folder_name": folder_path,
-        "recording_duration":16
+        "recording_duration":60,
+        "mean_channels": 50,
+        "theoretical_current":2
 
     }
 
     matrix = matrix_generator(params, first_sheet=True,debug=True)
     matrix_df = pd.DataFrame(matrix)
-    matrix_df.to_excel('testing_alignment_matrix.xlsx')
+    matrix_df.to_excel('testing_alignment_matrix_traynelis.xlsx')
 
 
 
 
 if __name__ == '__main__':
-    EPSC_Simulator()
+    # EPSC_Simulator()
     # test_NSFA_analysis()
-    # test_alignment_debug()
+    test_alignment_debug()

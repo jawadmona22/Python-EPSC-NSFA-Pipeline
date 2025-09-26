@@ -85,7 +85,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
         else:
             time_duration = params["recording_duration"]
         num_samples = epscs.shape[0]
-        # print(f"Shape of EPSCs: {epscs.shape}")
+        print(f"Shape of EPSCs: {epscs.shape}")
         ##Plotting the raw EPSCs, unchanged
 
         if save_figs:
@@ -115,7 +115,8 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
             elif alignment_type == "max_dv_dt":
                 alignment_processed = EPSC_preprocessing.align_dv_dt(epscs,debug=debug)
                 start_point = 15
-
+            elif alignment_type == "None":
+                alignment_processed = epscs
 
             if save_figs:
                 fig, axs = plt.subplots(1, 2)
@@ -123,11 +124,11 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                 for i in range(epscs.shape[1]):
                     axs[0].plot(timepoints, epscs[:, i], label=f'Trace {i + 1}')
                     axs[1].plot(timepoints, alignment_processed[:, i], label=f'Trace {i + 1}')
-                axs[0].axvline(x=15 * .02, color='red', linestyle='--', linewidth=2, label='Alignment Point')
+                axs[0].axvline(x=15 * (time_duration/num_samples), color='red', linestyle='--', linewidth=2, label='Alignment Point')
                 axs[0].set_xlabel('Time (ms)', fontsize=13)
                 axs[0].set_ylabel('Current (pA)', fontsize=13)
                 axs[0].set_title('EPSCs Before Alignment')
-                axs[1].axvline(x=15 * .02, color='red', linestyle='--', linewidth=2, label='Alignment Point')
+                axs[1].axvline(x=15 *  (time_duration/num_samples), color='red', linestyle='--', linewidth=2, label='Alignment Point')
                 axs[1].set_xlabel('Time (ms)', fontsize=13)
                 axs[1].set_ylabel('Current (pA)', fontsize=13)
                 axs[1].set_title(f'EPSCs After Alignment: {alignment_type}')
@@ -179,7 +180,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                         plt.xlabel("Time (ms)")
                         plt.ylabel("Current (pA)")
                         for index in segment_indices:
-                            plt.axvline(x=(peak_index + index) * .02, color='red', linestyle='--', linewidth=1)
+                            plt.axvline(x=(peak_index + index) * (time_duration/num_samples), color='red', linestyle='--', linewidth=1)
                         plt.savefig("Segments_Validation.png")
                         workflow_report[sheet_name][start_option] = 'Segments_Validation.png'
                         plt.show()
@@ -219,7 +220,8 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                         if "mean_channels" in params:
                             #Plot the idealized parabola
                             N = params["mean_channels"]
-                            ideal_parabola = np.poly1d([-1/N,.56*4,0])
+                            i = params["theoretical_current"]
+                            ideal_parabola = np.poly1d([-1/N,i,0])
                             roots = ideal_parabola.r
                             x_vals = np.linspace(min(roots) - 1, max(roots) + 1, 500)
                             axs.plot(x_vals,ideal_parabola(x_vals),color='blue')
