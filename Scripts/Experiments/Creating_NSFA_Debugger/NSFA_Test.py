@@ -53,26 +53,26 @@ def test_NSFA_analysis():
 def test_alignment_debug():
     print("TESTING Alignment Debug ANALYSIS")
     ##Create a combined matrix
-    file_name = 'C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\experimental-scripts\\Tranyelis_replica_EPSCs.xlsx'
+    file_name = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\experimental-scripts\\Changing_Geiger\\Geiger_replica_EPSCs_1mM_3x.xlsx'
     folder_path = 'EPSCs_Test_Files'
 
     params = {
         "direct_df_input": None,
-        "alignment": ["peak", "None"],
+        "alignment": ["None"],
         "analysis_start_point": ["peak_start"],
-        "scaling": ["minimize_error","raw","peak_scaling_at_peak_time"],
+        "scaling": ["raw"],
         "output": ["linear", "parabolic"],
         "file_name": file_name,
         "folder_name": folder_path,
-        "recording_duration":60,
+        "recording_duration":10,
         "mean_channels": 50,
-        "theoretical_current":2
+        "theoretical_current":.51
 
     }
 
-    matrix = matrix_generator(params, first_sheet=True,debug=True)
+    matrix = matrix_generator(params, first_sheet=True,debug=True,save_figs=True)
     matrix_df = pd.DataFrame(matrix)
-    matrix_df.to_excel('testing_alignment_matrix_traynelis.xlsx')
+    matrix_df.to_excel('NSFA_geiger_1mM_3x.xlsx')
 
 
 

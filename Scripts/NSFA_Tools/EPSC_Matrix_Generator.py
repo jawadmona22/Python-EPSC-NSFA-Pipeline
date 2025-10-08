@@ -206,6 +206,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                     matrix_entry = {"cell_name": sheet_name,"alignment":alignment_type,"analysis_start_point":start_option,"scaling":scaling_type,"linear_i":lin_initial_slope,"parabolic_i":initial_slope,"num_channels":n,"template_max":template_max}
                     matrix.append(matrix_entry)
                     if save_figs:
+                        print("Saving figs...")
                         fig, axs = plt.subplots(1, 1)
                         axs.scatter(means, vars, color='green')
                         for idx,item in enumerate(means):
@@ -231,6 +232,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                         axs.set_ylabel("Current variance (pA^2)")
 
                         plt.savefig(f"{params['folder_name']}/{alignment_type}_{start_option}_{scaling_type}_{sheet_name}.png")
+                        plt.show()
                     print(matrix_entry)
     return matrix
 

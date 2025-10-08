@@ -3,22 +3,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.integrate import solve_ivp
+import math
 
-
-# Rate Constants
+# Rate Constants in s-1 unless indicated as m-1s-1
 kC0C1 = 17.1e6 #m-1s-1
 kC1C0 = 157
-kC1C2 = 3.24e6
+kC1C2 = 3.24e6 #m-1s-1
 kC2C1 = 3.76e3
 kC2O = 14.9e3
-kOC2 = 4e3
+kOC2 = 4e3 * 3
 kC1C3 = 1.53e3
 kC3C1 = 408
 kC2C4 = 502
 kC4C2 = .377
-kOC5 = 121
+kOC5 = 121 * 3
 kC5O = 191
-kC3C4 = .611e6
+kC3C4 = .611e6 #m-1s-1
 kC4C3 = 2
 kC4C5 = 1.59e3
 kC5C4 = 899e3
@@ -33,9 +33,9 @@ V_hold = -60e-3 #holding potential
 V_rev = 0  #reversal potential
 
 ##Agonist Parameters
-agonist_conc = 1e-3
-pulse_start = 0.001 #Start at 1 ms
-pulse_end = pulse_start + .00001 #1 time step of 10microseconds
+agonist_conc = 1e-3 * 100
+pulse_start = 0 #Start at beginning
+pulse_end = 0.001 #end at 1ms
 
 
 ##Time Parameters
@@ -44,21 +44,69 @@ n_samples = 1000 #Time interval defined as 10microseconds, across 10ms, means 10
 t_eval = np.linspace(0,t_max,n_samples)
 time_ms = t_eval * 1e3
 
-num_traces = 100
+num_traces = 1000
 
-def agonist_conc_t(t):
-    return agonist_conc if (pulse_start <= t <= pulse_end) else 0.0
+def JGT(glutamate_scale):
+    AgPulse = np.zeros((1000))
+
+    for i in range (10,1000):
+        t = (i-9) * 0.00001
+        AgPulse[i] = (5 * (1 - math.exp(-t / 0.000000001))) * math.exp(-t / 0.00001)
+        AgPulse[i] = 1000 * glutamate_scale* AgPulse[i] #This makes the peak 1839.3972058572117 micro molar (1.839 mM)
+        AgPulse[i] = AgPulse[i]/1.8393972058572117 #Now we have 1.0 mM
+        if AgPulse[i] < .001:
+            AgPulse[i] = 0
+
+    return AgPulse
+
+def Agonist_Pulse(glutamate_scale = 1,steady=False,second_pulse=False):
+    AgPulse = np.zeros((2000))
+    if steady == True:
+        for i in range (10,2000):
+            AgPulse[i] = 1000 * glutamate_scale
+
+    else:
+        for i in range (10,1000):
+            t = (i-9) * 0.00002
+            AgPulse[i] = (5 * (1 - math.exp(-t / 0.000000002))) * math.exp(-t / 0.00002)
+            AgPulse[i] = 1000 * glutamate_scale* AgPulse[i] #This makes the peak 1839.3972058572117 micro molar (1.839 mM)
+            AgPulse[i] = AgPulse[i]/1.8393972058572117 #Now we have 1.0 mM
+            if AgPulse[i] < .001:
+                AgPulse[i] = 0
+        if second_pulse:
+            AgPulse[100:1090] = AgPulse[10:1000]
+    return AgPulse
+
+JGT_trace = JGT(5)
+OG_pulse = Agonist_Pulse(5)[0:800]/1000
+# print(JGT_trace.shape)
+# time = np.linspace(0,10,1000)
+og_time = np.linspace(0,16,800)
+# plt.plot(time,JGT_trace)
+plt.plot(og_time,OG_pulse)
+plt.xlabel("Time (ms)")
+plt.ylabel("[Glu] mM")
+plt.show()
+
+def agonist_conc_t(t,JGT=False):
+    if JGT:
+        return JGT_trace[int(t*100)]
+    if (pulse_start <= t <= pulse_end):
+        return agonist_conc
+    else:
+        return 0.0
+
 
 
 def rates_for_state(state, t):
     if state == 'C0':
-        return [('C1', kC0C1 * agonist_conc_t(t))]
+        return [('C1', kC0C1 * agonist_conc_t(t,JGT=False))]
     elif state == 'C1':
-        return [('C0', kC1C0), ('C3', kC1C3),('C2',kC1C2)]
+        return [('C0', kC1C0), ('C3', kC1C3),('C2',kC1C2 * agonist_conc_t(t,JGT=False))]
     elif state == 'C2':
         return [('C1', kC2C1),('C4',kC2C4),('O',kC2O)]
     elif state == 'C3':
-        return [('C1', kC3C1), ('C4', kC3C4)]
+        return [('C1', kC3C1), ('C4', kC3C4 * agonist_conc_t(t,JGT=False))]
     elif state == 'C4':
         return [('C2', kC4C2), ('C5', kC4C5),('C3',kC4C3)]
     elif state == 'C5':
@@ -128,19 +176,19 @@ def events_to_sampled_open(times, states, t_eval):
         sampled[i] = 1 if states[idx] == 'O' else 0
     return sampled
 
-# Single-channel example
-np.random.seed(1)
-times1, states1 = simulate_one_channel(t_max)
-open_trace1 = events_to_sampled_open(times1, states1, t_eval)
-
-plt.figure(figsize=(10,2.5))
-plt.step(time_ms, open_trace1, where='post')
-plt.ylim(-0.1, 1.1)
-plt.xlabel('Time (ms)')
-plt.ylabel('Open (1) / Closed (0)')
-plt.title('Single-channel stochastic trace (Gillespie SSA)')
-plt.tight_layout()
-plt.show()
+# # Single-channel example
+# np.random.seed(1)
+# times1, states1 = simulate_one_channel(t_max)
+# open_trace1 = events_to_sampled_open(times1, states1, t_eval)
+#
+# plt.figure(figsize=(10,2.5))
+# plt.step(time_ms, open_trace1, where='post')
+# plt.ylim(-0.1, 1.1)
+# plt.xlabel('Time (ms)')
+# plt.ylabel('Open (1) / Closed (0)')
+# plt.title('Single-channel stochastic trace (Gillespie SSA)')
+# plt.tight_layout()
+# plt.show()
 
 # Simulate N channels
 open_counts = np.zeros_like(t_eval, dtype=int)
@@ -177,10 +225,10 @@ for col in df.columns:
     plt.plot(df.index*1e3,df[col],alpha=.3)
 template = np.mean(df,axis=1)
 plt.plot(df.index*1e3,template)
-plt.title("Traynelis Replica, 100 EPSCs")
+plt.title("Veruki GluGei99 Replica, 1000 EPSCs")
 plt.show()
 df.columns = [f"trace_{i+1}" for i in range(num_traces)]
 
 
 df = df*-1
-df.to_excel("Geiger_replica_EPSCs.xlsx")
+df.to_excel(f"Changing_Geiger/Geiger_replica_EPSCs_{str(int(agonist_conc*1000))}mM_3x.xlsx")
