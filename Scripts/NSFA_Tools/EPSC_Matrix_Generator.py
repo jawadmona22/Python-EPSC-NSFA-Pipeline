@@ -231,7 +231,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                         axs.set_xlabel("Mean Current (pA)")
                         axs.set_ylabel("Current variance (pA^2)")
 
-                        plt.savefig(f"{params['folder_name']}/{alignment_type}_{start_option}_{scaling_type}_{sheet_name}.png")
+                        #plt.savefig(f"{params['folder_name']}/{alignment_type}_{start_option}_{scaling_type}_{sheet_name}.png")
                         plt.show()
                     print(matrix_entry)
     return matrix
