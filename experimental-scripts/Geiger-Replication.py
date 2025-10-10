@@ -28,6 +28,8 @@ kC5C4 = 899e3
 STATE_MAP = {'C0':0, 'C1':1, 'C2':2, 'C3':3, 'C4':4, 'C5':5, 'O':6}
 STATE_NAMES = {v:k for k,v in STATE_MAP.items()}
 
+
+
 N = 50 #num channels
 g = 8.5e-12 #conductance
 V_hold = -60e-3 #holding potential
@@ -82,7 +84,8 @@ plt.title("Glu Transients (1 mM peak)")
 plt.show()
 
 
-def agonist_conc_t(t,type='JGT'):
+
+def agonist_conc_t(t,type='None'):
     if type == 'JGT':
         return JGT(t)
     if (pulse_start <= t <= pulse_end):
@@ -124,8 +127,8 @@ def simulate_one_channel(t_max):
     times = [t]
     states = [state]
     while t < t_max:
-        trans = rates_for_state(state, t) #[(1,0)] = trans
-        rates = np.array([r for (_, r) in trans])
+        rates = RATES[state](t)
+        dests = DESTS[state]
         a0 = rates.sum()
         # boundary = next_pulse_boundary_after(t)
         if a0 <= 0:
@@ -145,15 +148,12 @@ def simulate_one_channel(t_max):
         t = t + dt
         r = np.random.rand() * a0
         cum = 0.0
-        chosen = None
-        for i, (_, rate) in enumerate(trans):
+        for i, rate in enumerate(rates):
             cum += rate
             if r <= cum:
-                chosen = trans[i][0]
+                state = dests[i]
                 break
-        if chosen is None:
-            chosen = trans[-1][0]
-        state = chosen
+
         times.append(t)
         states.append(state)
     if times[-1] < t_max:
@@ -233,15 +233,41 @@ def pick_number_channels(method="uniform", sd=0, mean=0, mog_params=None):
 # I_pA = I * 1e12
 
 # Simulate EPSCs
+RATES = {
+    0: lambda t: np.array([kC0C1 * agonist_conc_t(t)]),
+    1: lambda t: np.array([kC1C0, kC1C3, kC1C2 * agonist_conc_t(t)]),
+    2: lambda t: np.array([kC2C1, kC2C4, kC2O]),
+    3: lambda t: np.array([kC3C1, kC3C4 * agonist_conc_t(t)]),
+    4: lambda t: np.array([kC4C2, kC4C5, kC4C3]),
+    5: lambda t: np.array([kC5O, kC5C4]),
+    6: lambda t: np.array([kOC2, kOC5])
+}
+DESTS = {
+    0: np.array([1]),           # C0 → C1
+    1: np.array([0, 3, 2]),     # C1 → C0, C3, C2
+    2: np.array([1, 4, 6]),     # C2 → C1, C4, O
+    3: np.array([1, 4]),        # C3 → C1, C4
+    4: np.array([2, 5, 3]),     # C4 → C2, C5, C3
+    5: np.array([6, 4]),        # C5 → O, C4
+    6: np.array([2, 5])         # O → C2, C5
+}
+
+
+
+
+
 all_traces = []
+np.random.seed(12)
+random_N_array = np.random.normal(2200, 700, num_traces)
+random_N_array = np.clip(random_N_array, 500, 4000)
 
 for trace_id in tqdm(range(num_traces), desc="Processing traces"):
     open_counts = np.zeros_like(t_eval, dtype=int)
 
     # simulate N independent channels and sum their openings
-    N = pick_number_channels(method="normal",mean=2200,sd=700)
-    for n in range(N):
+    N = int(random_N_array[trace_id])
 
+    for n in range(N):
         times_n, states_n = simulate_one_channel(t_max)
         open_counts += events_to_sampled_open(times_n, states_n, t_eval)
 
@@ -266,4 +292,4 @@ df.columns = [f"trace_{i+1}" for i in range(num_traces)]
 
 
 df = df*-1
-df.to_excel(f"experimental-scripts/Changing_Geiger/Geiger_replica_EPSCs_{str(int(agonist_conc*1000))}mM_JGT_3x_n.xlsx")
+df.to_excel("test.xlsx") #(f"experimental-scripts/Changing_Geiger/Geiger_replica_EPSCs_{str(int(agonist_conc*1000))}mM_JGT_3x_n.xlsx")
