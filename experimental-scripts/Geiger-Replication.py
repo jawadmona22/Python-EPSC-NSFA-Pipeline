@@ -5,18 +5,35 @@ import pandas as pd
 from scipy.integrate import solve_ivp
 import math
 from tqdm import tqdm
+
+params = {
+    'glu_conc': 100, #mM
+    'channel_distribution':'normal', #fixed or normal
+    'transient_type': 'Veruki',
+    'RC_multiplier': 1,
+    'channel_mean': 50,
+    'channel_std':10,
+    'fixed_n_value':50,
+    'channels_lower_lim': 0
+
+}
+
+num_traces = 1000
+
+
+
 # Rate Constants in s-1 unless indicated as m-1s-1
 kC0C1 = 17.1e6 #m-1s-1
 kC1C0 = 157
 kC1C2 = 3.24e6 #m-1s-1
 kC2C1 = 3.76e3
 kC2O = 14.9e3
-kOC2 = 4e3 * 3
+kOC2 = 4e3 * params['RC_multiplier']
 kC1C3 = 1.53e3
 kC3C1 = 408
 kC2C4 = 502
 kC4C2 = .377
-kOC5 = 121 * 3
+kOC5 = 121 * params['RC_multiplier']
 kC5O = 191
 kC3C4 = .611e6 #m-1s-1
 kC4C3 = 2
@@ -30,13 +47,12 @@ STATE_NAMES = {v:k for k,v in STATE_MAP.items()}
 
 
 
-N = 50 #num channels
 g = 8.5e-12 #conductance
 V_hold = -60e-3 #holding potential
 V_rev = 0  #reversal potential
 
 ##Agonist Parameters
-agonist_conc = 1e-3 * 100
+agonist_conc = 1e-3 * params['glu_conc']
 pulse_start = 0 #Start at beginning
 pulse_end = 0.001 #end at 1ms
 
@@ -47,7 +63,6 @@ n_samples = 1000 #Time interval defined as 10microseconds, across 10ms, means 10
 t_eval = np.linspace(0,t_max,n_samples)
 time_ms = t_eval * 1e3
 
-num_traces = 1000
 
 
 def JGT(t): #scale in mM
@@ -68,24 +83,24 @@ def JGT(t): #scale in mM
 
     return conc
 #
-t = np.linspace(0, .01, 1000)
+# t = np.linspace(0, .01, 1000)
+#
+# glutamate = [JGT(tt) for tt in t]
+# print(glutamate)
+# plt.plot(t * 1e3, glutamate,color='red',label='JGT',alpha=1)  # convert to ms for x-axis
+# veruki_transient = np.zeros(1000)
+# for i in range(0,100):
+#     veruki_transient[i] = 1e-3
+# plt.plot(t*1e3,veruki_transient,color='blue',label='Veruki',alpha=.5)
+# plt.legend()
+# plt.xlabel("Time (ms)")
+# plt.ylabel("[Glutamate] (M)")
+# plt.title("Glu Transients (1 mM peak)")
+# plt.show()
 
-glutamate = [JGT(tt) for tt in t]
-print(glutamate)
-plt.plot(t * 1e3, glutamate,color='red',label='JGT',alpha=1)  # convert to ms for x-axis
-veruki_transient = np.zeros(1000)
-for i in range(0,100):
-    veruki_transient[i] = 1e-3
-plt.plot(t*1e3,veruki_transient,color='blue',label='Veruki',alpha=.5)
-plt.legend()
-plt.xlabel("Time (ms)")
-plt.ylabel("[Glutamate] (M)")
-plt.title("Glu Transients (1 mM peak)")
-plt.show()
 
 
-
-def agonist_conc_t(t,type='None'):
+def agonist_conc_t(t,type='Veruki'):
     if type == 'JGT':
         return JGT(t)
     if (pulse_start <= t <= pulse_end):
@@ -97,13 +112,13 @@ def agonist_conc_t(t,type='None'):
 
 def rates_for_state(state, t):
     if state == 0:
-        return [(1, kC0C1 * agonist_conc_t(t,type='JGT'))]
+        return [(1, kC0C1 * agonist_conc_t(t,type=params['transient_type']))]
     elif state == 1:
-        return [(0, kC1C0), (3, kC1C3),(2,kC1C2 * agonist_conc_t(t,type='JGT'))]
+        return [(0, kC1C0), (3, kC1C3),(2,kC1C2 * agonist_conc_t(t,type=params['transient_type']))]
     elif state == 2:
         return [(1, kC2C1),(4,kC2C4),(6,kC2O)]
     elif state == 3:
-        return [(1, kC3C1), (4, kC3C4 * agonist_conc_t(t,type='JGT'))]
+        return [(1, kC3C1), (4, kC3C4 * agonist_conc_t(t,type=params['transient_type']))]
     elif state == 4:
         return [(2, kC4C2), (5, kC4C5),(3,kC4C3)]
     elif state == 5:
@@ -159,7 +174,7 @@ def simulate_one_channel(t_max):
     if times[-1] < t_max:
         times.append(t_max)
         states.append(states[-1])
-    return np.array(times), np.array(states, str)
+    return np.array(times), np.array(states)
 
 
 def events_to_sampled_open(times, states, t_eval):
@@ -168,69 +183,12 @@ def events_to_sampled_open(times, states, t_eval):
     for i, tt in enumerate(t_eval):
         while idx + 1 < len(times) and times[idx + 1] <= tt:  #Converts the dt to the sample rate we want
             idx += 1
-        sampled[i] = 1 if states[idx] == 'O' else 0
+        sampled[i] = 1 if states[idx] == 6 else 0 #6 == O here
     return sampled
 
 
-def pick_number_channels(method="uniform", sd=0, mean=0, mog_params=None):
-    lower_limit = 50
-    upper_limit = 4000
-
-    if method == "uniform":
-        num_channels = np.random.uniform(lower_limit, upper_limit)
-
-    elif method == "normal":
-        #mean = 1100  # Center of the range
-        #std_dev = 300  # Ensures 99.7% of the data is between 200 and 2000
-        num_channels = int(np.clip(np.random.normal(mean, sd), lower_limit, upper_limit))
-
-    elif method == "lognormal":
-        num_channels = int(np.clip(np.random.lognormal(mean, sd), lower_limit, upper_limit))
-
-    elif method == "mog":  # Mixture of Gaussians
-        if mog_params is None:
-            raise ValueError("mog_params must be provided for Mixture of Gaussians")
-
-        num_components = len(mog_params["means"])
-        weights = np.array(mog_params["weights"])
-        weights /= weights.sum()  # Ensure weights sum to 1
-
-        # Pick a Gaussian component based on weights
-        component = np.random.choice(num_components, p=weights)
-        mean = mog_params["means"][component]
-        std_dev = mog_params["std_devs"][component]
-
-        # Sample from the selected Gaussian and clip
-        num_channels = int(np.clip(np.random.normal(mean, std_dev), lower_limit, upper_limit))
-
-    return num_channels
 
 
-
-
-
-# # Single-channel example
-# np.random.seed(1)
-# times1, states1 = simulate_one_channel(t_max)
-# open_trace1 = events_to_sampled_open(times1, states1, t_eval)
-#
-# plt.figure(figsize=(10,2.5))
-# plt.step(time_ms, open_trace1, where='post')
-# plt.ylim(-0.1, 1.1)
-# plt.xlabel('Time (ms)')
-# plt.ylabel('Open (1) / Closed (0)')
-# plt.title('Single-channel stochastic trace (Gillespie SSA)')
-# plt.tight_layout()
-# plt.show()
-
-# # Simulate N channels
-# open_counts = np.zeros_like(t_eval, dtype=int)
-# for n in range(N):
-#     times_n, states_n = simulate_one_channel(t_max)
-#     open_counts += events_to_sampled_open(times_n, states_n, t_eval)
-#
-# I = open_counts * g * (V_hold - V_rev)
-# I_pA = I * 1e12
 
 # Simulate EPSCs
 RATES = {
@@ -257,15 +215,23 @@ DESTS = {
 
 
 all_traces = []
-np.random.seed(12)
-random_N_array = np.random.normal(2200, 700, num_traces)
-random_N_array = np.clip(random_N_array, 500, 4000)
+np.random.seed(189)
+if params['channel_distribution'] == 'normal':
+    mean = params['channel_mean']
+    std = params['channel_std']
+    lower_lim = params['channels_lower_lim']
+    N_array = np.random.normal(mean, std, num_traces)
+    N_array = np.clip(N_array, lower_lim, 4000)
+
+elif params['channel_distribution'] == 'fixed':
+    fixed_N = params['fixed_n_value']
+    N_array =  np.full(num_traces, fixed_N)
 
 for trace_id in tqdm(range(num_traces), desc="Processing traces"):
     open_counts = np.zeros_like(t_eval, dtype=int)
 
     # simulate N independent channels and sum their openings
-    N = int(random_N_array[trace_id])
+    N = int(N_array[trace_id])
 
     for n in range(N):
         times_n, states_n = simulate_one_channel(t_max)
@@ -292,4 +258,8 @@ df.columns = [f"trace_{i+1}" for i in range(num_traces)]
 
 
 df = df*-1
-df.to_excel("test.xlsx") #(f"experimental-scripts/Changing_Geiger/Geiger_replica_EPSCs_{str(int(agonist_conc*1000))}mM_JGT_3x_n.xlsx")
+type = params['transient_type'][0:3]
+mult = str(params['RC_multiplier'])
+dist = params['channel_distribution'][0]
+
+df.to_excel(f"C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/experimental-scripts//Changing_Geiger/EPSCs_{str(int(agonist_conc*1000))}mM_{type}_{mult}x_{dist}.xlsx")

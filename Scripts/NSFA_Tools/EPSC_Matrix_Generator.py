@@ -159,13 +159,13 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                 elif scaling_type == "peak_scaling_at_peak_time":
                     residuals_array = EPSC_App_Connection.create_residuals(num_traces, raw_sorted,
                                                                                                   template,
-                                                                                                  error_minimize=False,peak_to_peak=False)
+                                                                                                  error_minimize=False,peak_to_peak=False,debug=debug)
 
 
                 elif scaling_type == "peak_to_peak_scaling":
                     residuals_array = EPSC_App_Connection.create_residuals(num_traces, raw_sorted,template,
 
-                                                                                                    error_minimize=False,peak_to_peak=True)
+                                                                                                    error_minimize=False,peak_to_peak=True,debug=debug)
                 elif scaling_type == "raw":
                     residuals_array = EPSC_App_Connection.raw_residuals(raw_sorted,template)
                 #For each analysis start point option
