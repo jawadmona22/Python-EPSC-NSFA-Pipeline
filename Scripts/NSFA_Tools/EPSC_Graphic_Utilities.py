@@ -76,7 +76,7 @@ def amplitude_histogram_creator(df,folder_name,plt_show = False):
         plt.show()
     return max_amplitudes
 
-def rise_times_histogram_creator(df,folder_name,plt_show = False):
+def rise_times_histogram_creator(df,folder_name,plt_show = False,sampling_rate = .02):
     max_amplitudes = df.abs().max(axis=0)
     rise_times = []
     for col in df.columns:
@@ -94,7 +94,7 @@ def rise_times_histogram_creator(df,folder_name,plt_show = False):
             idx_90 = above_90.idxmax()
 
             if idx_10 == 0:
-                time = idx_90 *.02
+                time = idx_90 * sampling_rate
                 rise_times.append(time)
                 continue  # Can't interpolate at the start of trace
 

@@ -100,7 +100,7 @@ def NSFA_pooled_risetimes():
 
     #Sort EPSCs by rise time
     EPSCs = pd.read_excel('EPSCs_for_rise_time.xlsx')
-    #egg.rise_times_histogram_creator(EPSCs,folder_name="Scripts/") #Ran this then deleted the "Trace" column
+    egg.rise_times_histogram_creator(EPSCs,folder_name="Scripts/") #Ran this then deleted the "Trace" column
     rise_times = pd.read_excel('rise_times.xlsx')
     bins = 4
     rise_times['bin'] = pd.cut(

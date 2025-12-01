@@ -137,7 +137,11 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                 plt.show()
                 workflow_report[sheet_name][alignment_type]['image'] = f'{folder_name}{alignment_type}_Alignment.png'
             #Create the template
-            timepoints, template = EPSC_App_Connection.create_template(alignment_processed,time_duration,num_samples)
+            try:
+                timepoints, template = EPSC_App_Connection.create_template(alignment_processed,time_duration,num_samples)
+            except Exception as e:
+                print("Empty trace!")
+                continue
             # workflow_report[sheet_name][alignment_type]['template_data'] = template
             workflow_report[sheet_name][alignment_type]['template_image'] = f'{folder_name}{alignment_type}_Alignment.png'
             template_max = np.max(template)
@@ -200,8 +204,13 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                     #     #Run mean variance with that alignment
 
                     #Derive i, n values for linear and parabolic
-                    fit_parabola, roots, initial_slope = EPSC_App_Connection.fitting_parabola(means, vars,force_linear=False)
-                    n = roots[0] / initial_slope
+                    try:
+                        fit_parabola, roots, initial_slope = EPSC_App_Connection.fitting_parabola(means, vars,force_linear=False)
+                        n = roots[0] / initial_slope
+
+                    except Exception as e:
+                        print(f"⚠️ Skipping sweep due to error in fitting_parabola: {e}")
+                        continue
                     lin_fit_parabola, lin_roots, lin_initial_slope = EPSC_App_Connection.fitting_parabola(means, vars,force_linear=True)
                     matrix_entry = {"cell_name": sheet_name,"alignment":alignment_type,"analysis_start_point":start_option,"scaling":scaling_type,"linear_i":lin_initial_slope,"parabolic_i":initial_slope,"num_channels":n,"template_max":template_max}
                     matrix.append(matrix_entry)

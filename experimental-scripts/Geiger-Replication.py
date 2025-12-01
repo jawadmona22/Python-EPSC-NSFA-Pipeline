@@ -7,13 +7,16 @@ import math
 from tqdm import tqdm
 
 params = {
-    'glu_conc': 100, #mM
+    'fixed_glu_conc': 1, #mM
+    'glu_distribution':'fixed' ,#fixed or normal
+    'glu_mean':None,
+    'glu_std':None,
     'channel_distribution':'normal', #fixed or normal
-    'transient_type': 'Veruki',
-    'RC_multiplier': 1,
-    'channel_mean': 50,
-    'channel_std':10,
-    'fixed_n_value':50,
+    'transient_type': 'Veruki', #Veruki or JGT
+    'RC_multiplier': 3,
+    'channel_mean': 2200,
+    'channel_std':700,
+    'fixed_n_value':None,
     'channels_lower_lim': 0
 
 }
@@ -52,7 +55,7 @@ V_hold = -60e-3 #holding potential
 V_rev = 0  #reversal potential
 
 ##Agonist Parameters
-agonist_conc = 1e-3 * params['glu_conc']
+# agonist_conc = 1e-3 * params['fixed_glu_conc']
 pulse_start = 0 #Start at beginning
 pulse_end = 0.001 #end at 1ms
 
@@ -100,33 +103,38 @@ def JGT(t): #scale in mM
 
 
 
-def agonist_conc_t(t,type='Veruki'):
+def agonist_conc_t(t):
+    type = params['transient_type']
     if type == 'JGT':
         return JGT(t)
-    if (pulse_start <= t <= pulse_end):
-        return agonist_conc
+    if type == 'Veruki':
+        if (pulse_start <= t <= pulse_end):
+            return agonist_conc
+        else:
+            return 0.0
     else:
-        return 0.0
+        print("WARNING! Invalid agonist type")
 
 
 
-def rates_for_state(state, t):
-    if state == 0:
-        return [(1, kC0C1 * agonist_conc_t(t,type=params['transient_type']))]
-    elif state == 1:
-        return [(0, kC1C0), (3, kC1C3),(2,kC1C2 * agonist_conc_t(t,type=params['transient_type']))]
-    elif state == 2:
-        return [(1, kC2C1),(4,kC2C4),(6,kC2O)]
-    elif state == 3:
-        return [(1, kC3C1), (4, kC3C4 * agonist_conc_t(t,type=params['transient_type']))]
-    elif state == 4:
-        return [(2, kC4C2), (5, kC4C5),(3,kC4C3)]
-    elif state == 5:
-        return [(6, kC5O), (4, kC5C4)]
-    elif state == 6:
-        return [(2, kOC2), (5, kOC5)]
-    else:
-        raise ValueError
+
+# def rates_for_state(state, t):
+#     if state == 0:
+#         return [(1, kC0C1 * agonist_conc_t(t,type=params['transient_type']))]
+#     elif state == 1:
+#         return [(0, kC1C0), (3, kC1C3),(2,kC1C2 * agonist_conc_t(t,type=params['transient_type']))]
+#     elif state == 2:
+#         return [(1, kC2C1),(4,kC2C4),(6,kC2O)]
+#     elif state == 3:
+#         return [(1, kC3C1), (4, kC3C4 * agonist_conc_t(t,type=params['transient_type']))]
+#     elif state == 4:
+#         return [(2, kC4C2), (5, kC4C5),(3,kC4C3)]
+#     elif state == 5:
+#         return [(6, kC5O), (4, kC5C4)]
+#     elif state == 6:
+#         return [(2, kOC2), (5, kOC5)]
+#     else:
+#         raise ValueError
 
 def next_pulse_boundary_after(t):
     boundaries = []
@@ -136,7 +144,7 @@ def next_pulse_boundary_after(t):
         boundaries.append(pulse_end)
     return min(boundaries) if boundaries else np.inf
 
-def simulate_one_channel(t_max):
+def simulate_one_channel(t_max,agonist_conc):
     t = 0.0
     state = 0
     times = [t]
@@ -223,18 +231,33 @@ if params['channel_distribution'] == 'normal':
     N_array = np.random.normal(mean, std, num_traces)
     N_array = np.clip(N_array, lower_lim, 4000)
 
+
+
 elif params['channel_distribution'] == 'fixed':
     fixed_N = params['fixed_n_value']
     N_array =  np.full(num_traces, fixed_N)
+
+
+if params['glu_distribution'] == 'normal':
+    mean = params['glu_mean']
+    std = params['glu_std']
+    glu_array = np.random.normal(2.5,1,num_traces)
+
+elif params['glu_distribution'] == 'fixed':
+    fixed_glu = params['fixed_glu_conc']
+    glu_array = np.full(num_traces,fixed_glu)
+
+
 
 for trace_id in tqdm(range(num_traces), desc="Processing traces"):
     open_counts = np.zeros_like(t_eval, dtype=int)
 
     # simulate N independent channels and sum their openings
     N = int(N_array[trace_id])
+    agonist_conc = glu_array[trace_id] * 1e-3
 
     for n in range(N):
-        times_n, states_n = simulate_one_channel(t_max)
+        times_n, states_n = simulate_one_channel(t_max,agonist_conc)
         open_counts += events_to_sampled_open(times_n, states_n, t_eval)
 
     # convert to current
@@ -252,7 +275,7 @@ for col in df.columns:
     plt.plot(df.index*1e3,df[col],alpha=.3)
 template = np.mean(df,axis=1)
 plt.plot(df.index*1e3,template)
-plt.title("Veruki GluGei99 Replica, 1000 EPSCs")
+plt.title("GluGei99")
 plt.show()
 df.columns = [f"trace_{i+1}" for i in range(num_traces)]
 
@@ -261,5 +284,5 @@ df = df*-1
 type = params['transient_type'][0:3]
 mult = str(params['RC_multiplier'])
 dist = params['channel_distribution'][0]
-
-df.to_excel(f"C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/experimental-scripts//Changing_Geiger/EPSCs_{str(int(agonist_conc*1000))}mM_{type}_{mult}x_{dist}.xlsx")
+glu_dist = params['glu_distribution'][0]
+df.to_excel(f"C:/Users/j.mona/Documents/GitHub/Python-EPSC-NSFA-Pipeline/experimental-scripts//Changing_Geiger/EPSCs_{type}_{mult}x_{dist}_{glu_dist}.xlsx") #  {str(int(agonist_conc*1000))}mM_{type}_{mult}x_{dist}_{glu_dist}.xlsx")
