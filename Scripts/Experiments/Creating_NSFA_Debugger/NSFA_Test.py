@@ -53,9 +53,25 @@ def test_NSFA_analysis():
 def test_alignment_debug():
     print("TESTING Alignment Debug ANALYSIS")
     ##Create a combined matrix
-    # file_name = 'C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\experimental-scripts\\Changing_Geiger\\binned_geiger_traces_equal_width.xlsx'
+    file_name = 'C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\experimental-scripts\\Changing_Geiger\\EPSCs_Ver_3x_n_n.xlsx'
     folder_path = 'EPSCs_Test_Files'
 
+    params = {
+        "direct_df_input": None,
+        "alignment": ["peak"],
+        "analysis_start_point": ["peak_start"],
+        "scaling": ["raw","peak_to_peak_scaling","minimize_error"],
+        "output": ["linear", "parabolic"],
+        "file_name": file_name,
+        "folder_name": folder_path,
+        "recording_duration":10,
+        "mean_channels": 2200,
+        "theoretical_current":.51
+
+    }
+
+    #UEPSCs
+    # file_name = r'C:\Users\j.mona\Documents\GitHub\Python-EPSC-NSFA-Pipeline\data-files\uEPSCS_forNSFA_WG24726.xlsx'
     # params = {
     #     "direct_df_input": None,
     #     "alignment": ["None"],
@@ -64,31 +80,15 @@ def test_alignment_debug():
     #     "output": ["linear", "parabolic"],
     #     "file_name": file_name,
     #     "folder_name": folder_path,
-    #     "recording_duration":10,
-    #     "mean_channels": 2200,
-    #     "theoretical_current":.51
+    #     "recording_duration":40,
     #
     # }
-
-    #UEPSCs
-    file_name = r'C:\Users\j.mona\Documents\GitHub\Python-EPSC-NSFA-Pipeline\data-files\uEPSCS_forNSFA_WG24726.xlsx'
-    params = {
-        "direct_df_input": None,
-        "alignment": ["None"],
-        "analysis_start_point": ["peak_start"],
-        "scaling": ["raw","peak_to_peak_scaling","minimize_error"],
-        "output": ["linear", "parabolic"],
-        "file_name": file_name,
-        "folder_name": folder_path,
-        "recording_duration":40,
-
-    }
 
 
 
     matrix = matrix_generator(params, first_sheet=False,debug=True,save_figs=True)
     matrix_df = pd.DataFrame(matrix)
-    matrix_df.to_excel('NSFA_uepscs.xlsx')
+    matrix_df.to_excel('testing_nglunchan_w_alignment.xlsx')
 
 
 
