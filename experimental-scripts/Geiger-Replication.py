@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 params = {
     'fixed_glu_conc': 1, #mM
-    'glu_distribution':'fixed' ,#fixed or normal
+    'glu_distribution':'normal' ,#fixed or normal
     'glu_mean':None,
     'glu_std':None,
     'channel_distribution':'normal', #fixed or normal
@@ -17,7 +17,11 @@ params = {
     'channel_mean': 2200,
     'channel_std':700,
     'fixed_n_value':None,
-    'channels_lower_lim': 0
+    'channels_lower_lim': 0,
+    'ci_ratio':0,
+    'ci_current': -.51 ,#in picoamps
+    'cp_current': -1.53
+
 
 }
 
@@ -49,10 +53,13 @@ STATE_MAP = {'C0':0, 'C1':1, 'C2':2, 'C3':3, 'C4':4, 'C5':5, 'O':6}
 STATE_NAMES = {v:k for k,v in STATE_MAP.items()}
 
 
-
+#########
 g = 8.5e-12 #conductance
 V_hold = -60e-3 #holding potential
 V_rev = 0  #reversal potential
+
+#########
+
 
 ##Agonist Parameters
 # agonist_conc = 1e-3 * params['fixed_glu_conc']
@@ -220,69 +227,76 @@ DESTS = {
 
 
 
-
-
-all_traces = []
-np.random.seed(189)
-if params['channel_distribution'] == 'normal':
-    mean = params['channel_mean']
-    std = params['channel_std']
-    lower_lim = params['channels_lower_lim']
-    N_array = np.random.normal(mean, std, num_traces)
-    N_array = np.clip(N_array, lower_lim, 4000)
-
-
-
-elif params['channel_distribution'] == 'fixed':
-    fixed_N = params['fixed_n_value']
-    N_array =  np.full(num_traces, fixed_N)
-
-
-if params['glu_distribution'] == 'normal':
-    mean = params['glu_mean']
-    std = params['glu_std']
-    glu_array = np.random.normal(2.5,1,num_traces)
-
-elif params['glu_distribution'] == 'fixed':
-    fixed_glu = params['fixed_glu_conc']
-    glu_array = np.full(num_traces,fixed_glu)
+ratio_list = [0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1]
+for ci_ratio in ratio_list:
+    params['ci_ratio'] = ci_ratio
+    all_traces = []
+    np.random.seed(189)
+    if params['channel_distribution'] == 'normal':
+        mean = params['channel_mean']
+        std = params['channel_std']
+        lower_lim = params['channels_lower_lim']
+        N_array = np.random.normal(mean, std, num_traces)
+        N_array = np.clip(N_array, lower_lim, 4000)
 
 
 
-for trace_id in tqdm(range(num_traces), desc="Processing traces"):
-    open_counts = np.zeros_like(t_eval, dtype=int)
-
-    # simulate N independent channels and sum their openings
-    N = int(N_array[trace_id])
-    agonist_conc = glu_array[trace_id] * 1e-3
-
-    for n in range(N):
-        times_n, states_n = simulate_one_channel(t_max,agonist_conc)
-        open_counts += events_to_sampled_open(times_n, states_n, t_eval)
-
-    # convert to current
-    I = open_counts * g * (V_hold - V_rev)  # Amps
-    I_pA = I * 1e12                         # picoAmps
-
-    all_traces.append(I_pA)
-
-# Convert to DataFrame: each column is one trace, rows are timepoints
-df = pd.DataFrame(np.array(all_traces).T, index=t_eval)
-
-plt.xlabel("Time (ms)")
-plt.ylabel("Current (pA)")
-for col in df.columns:
-    plt.plot(df.index*1e3,df[col],alpha=.3)
-template = np.mean(df,axis=1)
-plt.plot(df.index*1e3,template)
-plt.title("GluGei99")
-plt.show()
-df.columns = [f"trace_{i+1}" for i in range(num_traces)]
+    elif params['channel_distribution'] == 'fixed':
+        fixed_N = params['fixed_n_value']
+        N_array =  np.full(num_traces, fixed_N)
 
 
-df = df*-1
-type = params['transient_type'][0:3]
-mult = str(params['RC_multiplier'])
-dist = params['channel_distribution'][0]
-glu_dist = params['glu_distribution'][0]
-df.to_excel(f"C:/Users/j.mona/Documents/GitHub/Python-EPSC-NSFA-Pipeline/experimental-scripts//Changing_Geiger/EPSCs_{type}_{mult}x_{dist}_{glu_dist}.xlsx") #  {str(int(agonist_conc*1000))}mM_{type}_{mult}x_{dist}_{glu_dist}.xlsx")
+    if params['glu_distribution'] == 'normal':
+        mean = params['glu_mean']
+        std = params['glu_std']
+        glu_array = np.random.normal(2.5,1,num_traces)
+
+    elif params['glu_distribution'] == 'fixed':
+        fixed_glu = params['fixed_glu_conc']
+        glu_array = np.full(num_traces,fixed_glu)
+
+    ci_threshold = num_traces * params['ci_ratio'] #at this threshold we switch to the CP amplitude
+    ci_multiple = int(params['ci_ratio']  *10)
+    for trace_id in tqdm(range(num_traces), desc="Processing traces"):
+        open_counts = np.zeros_like(t_eval, dtype=int)
+
+        # simulate N independent channels and sum their openings
+        N = int(N_array[trace_id])
+        agonist_conc = glu_array[trace_id] * 1e-3
+
+        for n in range(N):
+            times_n, states_n = simulate_one_channel(t_max,agonist_conc)
+            open_counts += events_to_sampled_open(times_n, states_n, t_eval)
+
+        # convert to current
+        if trace_id <= ci_threshold:
+
+            I_pA = open_counts * params['ci_current']#g * (V_hold - V_rev)  # Amps
+        else:
+            I_pA = open_counts * params['cp_current']#g * (V_hold - V_rev)  # Amps
+
+
+        #I_pA = I * 1e12                         # picoAmps
+
+        all_traces.append(I_pA)
+
+    # Convert to DataFrame: each column is one trace, rows are timepoints
+    df = pd.DataFrame(np.array(all_traces).T, index=t_eval)
+
+    # plt.xlabel("Time (ms)")
+    # plt.ylabel("Current (pA)")
+    # for col in df.columns:
+    #     plt.plot(df.index*1e3,df[col],alpha=.3)
+    # template = np.mean(df,axis=1)
+    # plt.plot(df.index*1e3,template)
+    # plt.title("GluGei99")
+    # plt.show()
+    df.columns = [f"trace_{i+1}" for i in range(num_traces)]
+
+
+    df = df*-1
+    type = params['transient_type'][0:3]
+    mult = str(params['RC_multiplier'])
+    dist = params['channel_distribution'][0]
+    glu_dist = params['glu_distribution'][0]
+    df.to_excel(f"C:/Users/j.mona/Documents/GitHub/Python-EPSC-NSFA-Pipeline/experimental-scripts//CI_CP_Redo/normalglu_normaln_ci{ci_multiple}.xlsx")

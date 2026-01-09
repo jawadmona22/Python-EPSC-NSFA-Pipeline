@@ -53,12 +53,12 @@ def test_NSFA_analysis():
 def test_alignment_debug():
     print("TESTING Alignment Debug ANALYSIS")
     ##Create a combined matrix
-    file_name = 'C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\experimental-scripts\\Changing_Geiger\\EPSCs_Ver_3x_n_n.xlsx'
+    file_name = 'C:\\Users\\j.mona\\Documents\\GitHub\\Python-EPSC-NSFA-Pipeline\\experimental-scripts\\Changing_Geiger\\binned_equal_width_test.xlsx'
     folder_path = 'EPSCs_Test_Files'
 
     params = {
         "direct_df_input": None,
-        "alignment": ["peak"],
+        "alignment": ["None"],
         "analysis_start_point": ["peak_start"],
         "scaling": ["raw","peak_to_peak_scaling","minimize_error"],
         "output": ["linear", "parabolic"],
@@ -66,7 +66,7 @@ def test_alignment_debug():
         "folder_name": folder_path,
         "recording_duration":10,
         "mean_channels": 2200,
-        "theoretical_current":.51
+        "theoretical_current":1.275
 
     }
 
@@ -86,9 +86,10 @@ def test_alignment_debug():
 
 
 
-    matrix = matrix_generator(params, first_sheet=False,debug=True,save_figs=True)
+    matrix = matrix_generator(params,first_sheet=False,debug=False,save_figs=False)
+    print("Saving..")
     matrix_df = pd.DataFrame(matrix)
-    matrix_df.to_excel('testing_nglunchan_w_alignment.xlsx')
+    matrix_df.to_excel('testing-cell-ratio.xlsx')
 
 
 

@@ -133,47 +133,9 @@ rise_times = rise_times_histogram_creator(df,"/",sampling_rate=.01,plt_show=True
 # plt.title('Rise Times Comparison')
 # plt.show()
 
-# import seaborn as sns
-#
-# ##
-# binned_nsfa = pd.read_excel(r"C:\Users\j.mona\Documents\GitHub\Python-EPSC-NSFA-Pipeline\Scripts\Experiments\Creating_NSFA_Debugger\NSFA_EPSCs_EW_bins.xlsx")
-# print(binned_nsfa.head)
-#
-# df = binned_nsfa.copy()
-#
-# # Make scaling a categorical with a stable order (optional)
-# categories = df['scaling'].unique()            # or specify order: ['Linear','Log','Power']
-# df['scaling'] = pd.Categorical(df['scaling'], categories=categories, ordered=True)
-#
-# # map categories to x positions
-# x_codes = df['scaling'].cat.codes               # 0,1,2,...
-#
-# # reproducible jitter
-# rng = np.random.default_rng(42)
-# jitter_strength = 0.12                          # adjust to spread points horizontally
-# x_jitter = x_codes + rng.normal(0, jitter_strength, size=len(df))
-#
-# # color palette (one color per category)
-# palette = sns.color_palette("Set2", n_colors=len(categories))
-# colors = [palette[c] for c in x_codes]
-#
-# plt.figure(figsize=(7,5))
-# plt.scatter(x_jitter, df['linear_i'], c=colors, s=60, alpha=0.8)
-#
-# # add text labels (Bin)
-# for x, y, lbl in zip(x_jitter, df['linear_i'], df['bin']):   # ensure column name is 'bin'
-#     plt.text(x, y + 0.01, str(lbl), ha='center', va='bottom', fontsize=8)
-#
-# # cosmetics
-# plt.xticks(range(len(categories)), categories)
-# plt.xlabel("Scaling Type")
-# plt.ylabel("linear_i")
-# plt.title("linear_i by Scaling Type (Labeled by Bin)")
-# plt.show()
 
-#
-# # Load data
-# df = pd.read_excel("EPSCs_Ver_3x_n_n.xlsx")
+# Load data
+# df = pd.read_excel("EPSCs_test.xlsx")
 # print(df.shape)
 #
 # # Compute rise times
@@ -206,7 +168,7 @@ rise_times = rise_times_histogram_creator(df,"/",sampling_rate=.01,plt_show=True
 # plt.tight_layout()
 # plt.show()
 # # Create Excel file with a tab per bin
-# with pd.ExcelWriter("binned_geiger_traces_equal_width.xlsx", engine="openpyxl") as writer:
+# with pd.ExcelWriter("binned_equal_width_test.xlsx", engine="openpyxl") as writer:
 #     for i, category in enumerate(bin_categories, start=1):
 #         # Get columns that fall into this bin
 #         cols_in_bin = rise_times.index[binned == category]
@@ -218,3 +180,45 @@ rise_times = rise_times_histogram_creator(df,"/",sampling_rate=.01,plt_show=True
 #             subset.to_excel(writer, sheet_name=f"Bin_{i}", index=False, header=False)
 #
 # print("Excel file created...")
+
+
+
+import seaborn as sns
+
+##
+binned_nsfa = pd.read_excel(r"C:\Users\j.mona\Documents\GitHub\Python-EPSC-NSFA-Pipeline\Scripts\Experiments\Creating_NSFA_Debugger\testing-cell-ratio.xlsx")
+print(binned_nsfa.head)
+
+df = binned_nsfa.copy()
+
+# Make scaling a categorical with a stable order (optional)
+categories = df['scaling'].unique()            # or specify order: ['Linear','Log','Power']
+df['scaling'] = pd.Categorical(df['scaling'], categories=categories, ordered=True)
+
+# map categories to x positions
+x_codes = df['scaling'].cat.codes               # 0,1,2,...
+
+# reproducible jitter
+rng = np.random.default_rng(42)
+jitter_strength = 0.12                          # adjust to spread points horizontally
+x_jitter = x_codes + rng.normal(0, jitter_strength, size=len(df))
+
+# color palette (one color per category)
+palette = sns.color_palette("Set2", n_colors=len(categories))
+colors = [palette[c] for c in x_codes]
+
+plt.figure(figsize=(7,5))
+plt.scatter(x_jitter, df['linear_i'], c=colors, s=60, alpha=0.8)
+
+# add text labels (Bin)
+for x, y, lbl in zip(x_jitter, df['linear_i'], df['bin']):   # ensure column name is 'bin'
+    plt.text(x, y + 0.01, str(lbl), ha='center', va='bottom', fontsize=8)
+
+plt.axhline(y=1.275, color='green', linestyle='--', linewidth=2, label='Expected Current')
+
+# cosmetics
+plt.xticks(range(len(categories)), categories)
+plt.xlabel("Scaling Type")
+plt.ylabel("linear_i")
+plt.title("linear_i by Scaling Type (Labeled by Bin)")
+plt.show()
