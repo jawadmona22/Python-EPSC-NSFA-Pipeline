@@ -287,7 +287,7 @@ for ci_ratio in ratio_list:
     # plt.ylabel("Current (pA)")
     # for col in df.columns:
     #     plt.plot(df.index*1e3,df[col],alpha=.3)
-    # template = np.mean(df,axis=1)
+    # template = np.mean(
     # plt.plot(df.index*1e3,template)
     # plt.title("GluGei99")
     # plt.show()

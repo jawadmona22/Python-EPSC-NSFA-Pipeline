@@ -54,8 +54,8 @@ def align_peaks(unprocessed_EPSCs):
             shifted_col[:shift] = 0  # Zero out introduced values
 
         # Debugging print: Before & after shift
-        print(f"Original col: {col[:20]}")  # Print first 20 values
-        print(f"Shifted col: {shifted_col[:20]}")  # Print first 20 values
+        # print(f"Original col: {col[:20]}")  # Print first 20 values
+        # print(f"Shifted col: {shifted_col[:20]}")  # Print first 20 values
 
         # Ensure assignment works correctly
         processed_EPSCs[:, col_idx] = shifted_col.copy()
@@ -64,8 +64,8 @@ def align_peaks(unprocessed_EPSCs):
         new_peak_idx = np.argmax(processed_EPSCs[:, col_idx])
         if new_peak_idx != target_idx:
             print(f"❌ Warning: Peak in col {col_idx} expected at {target_idx}, but found at {new_peak_idx}")
-        else:
-            print(f"✅ Success: Peak in col {col_idx} correctly aligned at {target_idx}")
+        # else:
+        #     print(f"✅ Success: Peak in col {col_idx} correctly aligned at {target_idx}")
 
     return processed_EPSCs, target_idx
 

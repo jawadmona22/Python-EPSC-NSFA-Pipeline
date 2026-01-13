@@ -37,7 +37,7 @@ Control_Params = {
     "analysis_start_point": ["peak_start"],
     "scaling": ["minimize_error","peak_to_peak_scaling"],
     "output": ["linear", "parabolic"],
-    "file_name": "data-files/Many_EPSCs_Juan.xlsx",
+    "file_name": "data-files/Control_Experimental_EPSCs_Juan.xlsx",
     "folder_name": "C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/matrix_outputs/Control_Results/"
 
 }

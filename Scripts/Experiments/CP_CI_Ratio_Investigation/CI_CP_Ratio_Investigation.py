@@ -100,12 +100,12 @@ def create_fixed_simulation():
 
 ##INTERMEDIATE STEP: Creating CDFs of the EPSCs decay taus with the *median* rather than the mean so that Jim can fit the simulation parameters to that 
 def create_median_tau_CDFs():
-    file_name = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\Many_EPSCs_Juan.xlsx'
+    file_name = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\Control_Experimental_EPSCs_Juan.xlsx'
     folder_name = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\Median_CDF_Results\\'
     egg.generate_meanECDF_data(file_name=file_name,folder_name=folder_name,use_mean =True, use_median=True,plt_show=True,time=6)
 
 def get_global_median_tau():
-    file_name = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\Many_EPSCs_Juan.xlsx'
+    file_name = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\Control_Experimental_EPSCs_Juan.xlsx'
     folder_name = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\Scripts\\Experiments\\CP_CI_Ratio_Investigation\\Median_CDF_Results\\'
 
     all_taus = []
@@ -367,7 +367,7 @@ def NSFA_Size_Requirements_CDF_Fit(): #Running NSFA on 100, 250, and 500 samples
     sample_current_df.to_excel("Sample_Current_DF_CDF_fit.xlsx")
 def median_cell_template_extraction():  #Running template extraction for all analysis types on Cell O23A
     templates = {}
-    file_path = 'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/data-files/Many_EPSCs_Juan.xlsx'
+    file_path = 'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/data-files/Control_Experimental_EPSCs_Juan.xlsx'
     epscs = pd.read_excel(file_path,sheet_name='JG21O23A')
     time_duration = epscs.shape[0] * .02
     num_samples = epscs.shape[0]
@@ -579,7 +579,7 @@ def NSFA_Size_Requirements_Physiological(): #Running NSFA on 100, 250, and 500 s
     ##Create a combined matrix
     output_file = 'size_invest_EPSCs_physio.xlsx'
     folder_path = 'Physio_Invest'
-    df = pd.read_excel("C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/data-files/Many_EPSCs_Juan.xlsx",sheet_name='JG21O23A')
+    df = pd.read_excel("C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/data-files/Control_Experimental_EPSCs_Juan.xlsx",sheet_name='JG21O23A')
 
     sample_size_current_tracking = {}
     for sample_size in sample_size_list:
@@ -794,7 +794,7 @@ def calculate_fcp(ici,ict): #sub_df should be a dataframe/series with the column
 def IEM_vs_Control_NSFA():
 
     iem_data_path = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\IEM_Data\\IEM_EPSCs.xlsx'
-    control_data_path = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\Many_EPSCs_Juan.xlsx'
+    control_data_path = 'C:\\Users\\jawad\\Downloads\\Python-EPSC-NSFA-Pipeline\\data-files\\Control_Experimental_EPSCs_Juan.xlsx'
 
     print("Reading in Control Data...")
     control_data = pd.read_excel(control_data_path,sheet_name=None)

@@ -337,7 +337,7 @@ def ks_matrix_generator(experimental, simulation,title=""):
 def compare_IEM_control():
     IEM_excel_file = pd.ExcelFile("IEM_Data/IEM_EPSCs.xlsx")
     IEM_sheet_names = IEM_excel_file.sheet_names
-    control_excel_file = pd.ExcelFile("data-files/Many_EPSCs_Juan.xlsx")
+    control_excel_file = pd.ExcelFile("data-files/Control_Experimental_EPSCs_Juan.xlsx")
     control_sheet_names = control_excel_file.sheet_names
     IEM_mean_rise_times = np.array([])
     control_mean_rise_times = np.array([])
@@ -362,7 +362,7 @@ def compare_IEM_control():
             labels = []
             print(f"Sheet to compare: control - {split_name} and IEM - {sheet_name} ")
             IEM_data = pd.read_excel("IEM_Data/IEM_EPSCs.xlsx",sheet_name = sheet_name)
-            control_data = pd.read_excel("data-files/Many_EPSCs_Juan.xlsx",sheet_name = split_name)
+            control_data = pd.read_excel("data-files/Control_Experimental_EPSCs_Juan.xlsx",sheet_name = split_name)
             #IEM data read-in
             IEM_rise_times = rise_times_histogram_creator(df=IEM_data,folder_name = "IEM_Data/")
             IEM_peak_amplitudes = amplitude_histogram_creator(df=IEM_data,folder_name = "IEM_Data/")
@@ -575,7 +575,7 @@ def main():
     #
     #
 
-    # file_name = 'data-files/Many_EPSCs_Juan.xlsx'
+    # file_name = 'data-files/Control_Experimental_EPSCs_Juan.xlsx'
     # # EPSCs = pd.read_excel(file_name)
     # folder_name = 'Many_EPSCs_Juan/'
     #
@@ -736,7 +736,7 @@ if __name__ == "__main__":
     # folder_name = 'Experimental_200_plts/'
 
     # For Juan's (Many) Experimental 1/28
-    # file_name = 'data-files/Many_EPSCs_Juan.xlsx'
+    # file_name = 'data-files/Control_Experimental_EPSCs_Juan.xlsx'
     # EPSCs = pd.read_excel(file_name)
     # folder_name = 'Many_EPSCs_Juan/'
 

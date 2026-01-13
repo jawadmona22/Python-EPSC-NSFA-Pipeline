@@ -36,7 +36,7 @@ def generate_meanECDF_data():
     ###STEP 1: Generate Mean CDF Data ####
     # ##Many CDF generation
     root = 'C:/Users/jawad/Downloads/Python-EPSC-NSFA-Pipeline/'
-    file_name = root + 'data-files/Many_EPSCs_Juan.xlsx'
+    file_name = root + 'data-files/Control_Experimental_EPSCs_Juan.xlsx'
     exp_rise_times = []
     exp_amplitudes = []
     exp_taus = []

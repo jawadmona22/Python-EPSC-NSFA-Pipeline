@@ -18,7 +18,7 @@ def generate_meanECDF_data(data_type = "rise_times"):
     """Generate a dataset that follows the given CDF."""
     ###STEP 1: Generate Mean CDF Data ####
     # ##Many CDF generation
-    file_name = 'data-files/Many_EPSCs_Juan.xlsx'
+    file_name = 'data-files/Control_Experimental_EPSCs_Juan.xlsx'
     exp_rise_times = []
     exp_amplitudes = []
     exp_taus = []
