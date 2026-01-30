@@ -360,14 +360,13 @@ def create_residuals(num_traces,EPSCs_sorted,template, error_minimize=True, peak
 
 
     return residuals_array
-def create_segment_indices(template,start_option):
+def create_segment_indices(template,start_option,endPoint):
 
     ###Actual segments
     peak_index = np.argmax(template)
 
     print("The start index of the analysis is: ", start_option)
     print("The peak index of the analysis is", peak_index)
-    endPoint = template.shape[0] - 1
     template_decay_range = template[peak_index:endPoint]
 
     peak = np.max(template_decay_range)
@@ -411,7 +410,7 @@ def fitting_parabola(means,variances,force_linear=False):
     coefficients_2[2] = 0 #Force zero intercept
     #Force linear if not concave
     if coefficients_2[0] > 0 or force_linear==True:
-        coefficients_2 = np.polyfit(np.sort(means)[0:2],np.sort(variances)[0:2],1)
+        coefficients_2 = np.polyfit(np.sort(means)[0:5],np.sort(variances)[0:5],1)
         coefficients_2[1] = 0
     fit_parabola = np.poly1d(coefficients_2)
     roots = np.roots(coefficients_2)

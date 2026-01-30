@@ -152,7 +152,10 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
             pool_indices = EPSC_App_Connection.create_pool_indices(alignment_processed, peak_index)
             num_traces = alignment_processed.shape[1]
             raw_sorted = EPSC_App_Connection.sort_EPSCs_by_size(alignment_processed, peak_index)
-            endPoint = template.shape[0] - 1
+            sampling_rate = num_samples/time_duration #yields sample/ms
+            four_seconds_point = sampling_rate * 4 #4ms * xsamples/ms
+            endPoint = int(four_seconds_point) #template.shape[0] - 1
+            print(f"Endpoint: {endPoint}")
 
             #For each scaling option
             for scaling_type in params["scaling"]:
@@ -174,7 +177,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                     residuals_array = EPSC_App_Connection.raw_residuals(raw_sorted,template)
                 #For each analysis start point option
                 for start_option in params["analysis_start_point"]:
-                    segment_indices = EPSC_App_Connection.create_segment_indices(template, start_option)
+                    segment_indices = EPSC_App_Connection.create_segment_indices(template, start_option,endPoint)
 
 
                     if debug:
@@ -225,6 +228,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                         if len(roots) > 1:
                             x_vals = np.linspace(min(roots) - 1, max(roots) + 1, 500)
                             axs.plot(x_vals, fit_parabola(x_vals), color='black')
+
                         else:
                             axs.plot(sorter,lin_fit_parabola(sorter),color='red')
                         if "mean_channels" in params:
@@ -235,7 +239,7 @@ def matrix_generator(params,first_sheet=True,debug=False,save_figs=True): #Where
                             roots = ideal_parabola.r
                             x_vals = np.linspace(min(roots) - 1, max(roots) + 1, 500)
                             axs.plot(x_vals,ideal_parabola(x_vals),color='blue')
-                        # axs.plot(sorter[0:5], lin_fit_parabola(sorter)[0:5], color='red')
+                        axs.plot(sorter[0:20], lin_fit_parabola(sorter)[0:20], color='red')
                         axs.set_title("Variance vs Mean")
                         axs.set_xlabel("Mean Current (pA)")
                         axs.set_ylabel("Current variance (pA^2)")
